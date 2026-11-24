@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AD Scan</title>
+<title>ALM Scan</title>
 <meta name="theme-color" content="#1d3fd6">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="AD Scan">
+<meta name="apple-mobile-web-app-title" content="ALM Scan">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
@@ -112,7 +112,7 @@ label.f{display:block;font-size:14px;font-weight:600;color:var(--mute);margin:12
 </head>
 <body>
 <header class="top"><div class="row">
- <div class="ttl"><h1 id="listName">AD Scan</h1><div class="count" id="count">0 parts</div></div>
+ <div class="ttl"><h1 id="listName">ALM Scan</h1><div class="count" id="count">0 parts</div></div>
  <button class="iconbtn" id="menuBtn" aria-label="List options"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
 </div></header>
 
@@ -161,7 +161,7 @@ label.f{display:block;font-size:14px;font-weight:600;color:var(--mute);margin:12
 <div class="sheet" id="menuSheet"><div class="panel">
  <h2>List options</h2>
  <label class="f" for="nameIn">List name</label>
- <input class="in" id="nameIn" maxlength="40" autocomplete="off" placeholder="AD Scan">
+ <input class="in" id="nameIn" maxlength="40" autocomplete="off" placeholder="ALM Scan">
  <label class="f" for="prefix">Label prefix for new parts</label>
  <input class="in" id="prefix" maxlength="12" autocomplete="off" autocapitalize="characters">
  <p class="hint" id="nextHint"></p>
@@ -357,7 +357,7 @@ function del(id){S.items=S.items.filter(x=>x.id!==id);save();render()}
 function fmt(ts){const d=new Date(ts);return d.toLocaleDateString(undefined,{day:'numeric',month:'short'})+' '+d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})}
 function render(){
  const items=[...S.items].sort((a,b)=>b.ts-a.ts);updateCounts();
- $('listName').textContent=S.name||'AD Scan';document.title=S.name||'AD Scan';
+ $('listName').textContent=S.name||'ALM Scan';document.title=S.name||'ALM Scan';
  $('empty').hidden=items.length>0;
  $('list').innerHTML=items.map(it=>`<li><button class="item${S.fresh.has(it.id)?' fresh':''}" data-id="${esc(it.id)}"><span class="tag">${esc(it.label||'—')}</span><span><div class="serial mono">${esc(it.serial)}</div><div class="meta">${esc(fmt(it.ts))}</div></span></button></li>`).join('');
  S.fresh.clear();$('nextHint').textContent='Next new part will be '+nextLabel()+'.';
@@ -385,13 +385,13 @@ $('toastUndo').addEventListener('click',()=>{if(undoItem){put(undoItem);undoItem
 
 $('menuBtn').addEventListener('click',()=>{$('prefix').value=S.prefix;$('nameIn').value=S.name;$('beepIn').checked=S.beep;$('menuMsg').textContent='';render();open('menuSheet')});
 $('prefix').addEventListener('input',e=>{S.prefix=e.target.value.trim()||'P';ls.set(K.prefix,S.prefix);$('nextHint').textContent='Next new part will be '+nextLabel()+'.'});
-$('nameIn').addEventListener('input',e=>{S.name=e.target.value.trim();ls.set(K.name,S.name);$('listName').textContent=S.name||'AD Scan'});
+$('nameIn').addEventListener('input',e=>{S.name=e.target.value.trim();ls.set(K.name,S.name);$('listName').textContent=S.name||'ALM Scan'});
 $('beepIn').addEventListener('change',e=>{S.beep=e.target.checked;ls.set(K.beep,S.beep)});
 function csv(sep){const rows=[...S.items].sort((a,b)=>a.ts-b.ts).map(it=>{const d=new Date(it.ts),p=n=>String(n).padStart(2,'0');
   return[it.label,it.serial,`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`]});
  const cell=v=>{v=String(v);if(sep==='\t')return v.replace(/[\t\n]/g,' ');if(/^[=+\-@]/.test(v))v="'"+v;return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
  return [['Label','Serial','Scanned'],...rows].map(r=>r.map(cell).join(sep)).join('\r\n')}
-function fileName(){const d=new Date(),p=n=>String(n).padStart(2,'0');const base=(S.name||'AD-Scan').replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'-')||'AD-Scan';
+function fileName(){const d=new Date(),p=n=>String(n).padStart(2,'0');const base=(S.name||'ALM-Scan').replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'-')||'ALM-Scan';
  return `${base}-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.csv`}
 const csvFile=()=>new File(['﻿'+csv(',')],fileName(),{type:'text/csv'});
 if(navigator.canShare){try{if(navigator.canShare({files:[new File(['x'],'t.csv',{type:'text/csv'})]}))$('shareCsv').hidden=false}catch{}}

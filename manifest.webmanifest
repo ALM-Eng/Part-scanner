@@ -1,6 +1,6 @@
 {
-  "name": "AD Scan",
-  "short_name": "AD Scan",
+  "name": "ALM Scan",
+  "short_name": "ALM Scan",
   "description": "Scan part Data Matrix codes into a labelled serial number list.",
   "start_url": "./",
   "scope": "./",

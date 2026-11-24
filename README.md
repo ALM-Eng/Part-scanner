@@ -1,4 +1,4 @@
-# AD Scan
+# ALM Scan
 
 A phone web app that scans part Data Matrix codes with the live camera and keeps the serial numbers in a list, each tagged P1, P2, P3… It works offline and installs to the home screen.
 
@@ -14,7 +14,7 @@ A phone web app that scans part Data Matrix codes with the live camera and keeps
 
 1. Open the link in **Safari**.
 2. Tap **Share**, then **Add to Home Screen**, then **Add**.
-3. Open AD Scan from the home screen and allow the camera when asked.
+3. Open ALM Scan from the home screen and allow the camera when asked.
 
 ## Using it
 
@@ -28,6 +28,6 @@ Your scans are saved on the phone only. They never go to GitHub. Export them bef
 
 ## Updating it later
 
-Upload the changed files to the same repository. In `sw.js`, change the version number at the end of `part-scanner-v2` (to `v3`, `v4`, and so on) so phones pick up the new version.
+Upload the changed files to the same repository. In `sw.js`, change the version number at the end of `part-scanner-v3` (to `v4`, `v5`, and so on) so phones pick up the new version.
 
 Data Matrix decoding uses zxing-wasm / zxing-cpp (MIT and Apache-2.0 licences; see ZXING-LICENSE.txt).
