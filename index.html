@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Part Scanner</title>
+<meta name="theme-color" content="#1d3fd6">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Part Scanner">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>
+/* VOICE: shop-floor tool, quick and certain, nothing decorative.
+   IDEA: a rack of yellow inspection tags hung on parts, each tag carrying its serial.
+   PICTURE: the live viewfinder with a scan window; then the tag list.
+   COLOUR and TYPE: layout-dye blue band, white work surface, safety-yellow tags; system UI font + monospace serials (works offline).
+   LAYOUT: phone-first single column, big Scan button docked at thumb height, list grows above it. */
+:root{color-scheme:light dark;
+ --bg:light-dark(#f4f5f7,#0b0f1c);--card:light-dark(#fff,#151b2e);--ink:light-dark(#0b1020,#eef1f8);
+ --mute:light-dark(#5b6275,#9aa3ba);--line:light-dark(#e2e5ec,#242c45);
+ --blue:#1d3fd6;--blue2:light-dark(#1734b8,#3557f0);--tag:#ffd21f;--tagink:#2a2100;--bad:#d7263d;--ok:#12a150;--dup:#ff8a3d}
+@supports not (color:light-dark(#000,#fff)){
+ :root{--bg:#f4f5f7;--card:#fff;--ink:#0b1020;--mute:#5b6275;--line:#e2e5ec;--blue2:#1734b8}
+ @media (prefers-color-scheme:dark){:root{--bg:#0b0f1c;--card:#151b2e;--ink:#eef1f8;--mute:#9aa3ba;--line:#242c45;--blue2:#3557f0}}}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:17px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;overflow-x:clip;
+ padding-bottom:calc(100px + env(safe-area-inset-bottom));-webkit-text-size-adjust:100%}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer;-webkit-tap-highlight-color:transparent}
+:focus-visible{outline:3px solid var(--tag);outline-offset:2px}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+.top{background:var(--blue);color:#fff;padding:calc(12px + env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) 16px max(16px,env(safe-area-inset-left))}
+.top .row{display:flex;align-items:center;gap:12px;max-width:720px;margin:0 auto}
+.ttl{flex:1}
+h1{font-size:30px;line-height:1.05;margin:0;font-weight:700;overflow-wrap:anywhere}
+.count{font-size:15px;opacity:.85;font-weight:500}
+.iconbtn{flex:none;width:44px;height:44px;border-radius:12px;border:0;background:rgba(255,255,255,.16);color:#fff;display:grid;place-items:center}
+.wrap{max-width:720px;margin:0 auto;padding:0 max(16px,env(safe-area-inset-left))}
+.status{margin:14px 0 0;font-size:15px;color:var(--mute);min-height:22px}
+.status.err{color:var(--bad);font-weight:600}.status.good{color:var(--ok);font-weight:600}
+.shot{margin-top:12px;background:#000;border-radius:16px;overflow:hidden;position:relative;display:none}
+.shot.on{display:block}
+.shot canvas{display:block;width:100%;height:auto;max-height:46vh;object-fit:contain}
+.shot .cap{position:absolute;left:10px;bottom:10px;background:rgba(0,0,0,.65);color:#fff;font-size:13px;padding:4px 10px;border-radius:99px}
+.shot .x{position:absolute;right:8px;top:8px;background:rgba(0,0,0,.55)}
+.busy{display:none;position:absolute;inset:0;background:rgba(0,0,0,.45);color:#fff;place-items:center;font-weight:600}
+.shot.working .busy{display:grid}
+.list{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:10px}
+.item{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px 10px 10px;width:100%;text-align:left}
+.item.fresh{animation:pop .7s ease-out}
+@keyframes pop{from{background:color-mix(in srgb,var(--tag) 45%,var(--card))}}
+.tag{position:relative;background:var(--tag);color:var(--tagink);font-weight:700;font-size:18px;min-width:64px;height:48px;padding:0 12px 0 22px;display:grid;place-items:center;
+ clip-path:polygon(12px 0,100% 0,100% 100%,12px 100%,0 50%);border-radius:0 8px 8px 0;white-space:nowrap}
+.tag::before{content:"";position:absolute;left:12px;top:50%;width:7px;height:7px;margin-top:-3.5px;border-radius:50%;background:var(--card)}
+.serial{font-size:16px;line-height:1.3;font-weight:500;overflow-wrap:anywhere}
+.meta{font-size:13px;color:var(--mute);margin-top:2px}
+.empty{margin-top:28px;text-align:center;color:var(--mute);padding:28px 16px;border:2px dashed var(--line);border-radius:16px}
+.empty b{display:block;color:var(--ink);font-size:20px;margin-bottom:6px}
+.dock{position:fixed;left:0;right:0;bottom:0;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+ border-top:1px solid var(--line);padding:12px max(16px,env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));z-index:5}
+.dock .row{max-width:720px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px}
+.scan{height:60px;border:0;border-radius:16px;background:var(--blue2);color:#fff;font-size:20px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px}
+.side{position:relative;width:60px;height:60px;border-radius:16px;border:1px solid var(--line);background:var(--card);display:grid;place-items:center;color:var(--mute)}
+.side input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+.side svg,.scan svg{pointer-events:none}
+/* live scanner */
+.live{position:fixed;inset:0;background:#000;z-index:40;display:none;color:#fff}
+.live.on{display:block}
+.live video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.win{position:absolute;left:50%;top:44%;width:min(78vw,62vh,520px);aspect-ratio:1;transform:translate(-50%,-50%);border-radius:22px;
+ box-shadow:0 0 0 200vmax rgba(0,0,0,.5);border:3px solid rgba(255,255,255,.9);transition:border-color .15s}
+.win.hit{border-color:var(--tag);box-shadow:0 0 0 200vmax rgba(0,0,0,.5),inset 0 0 0 6px rgba(255,210,31,.5)}
+.win.dup{border-color:var(--dup)}
+.win.paused{border-style:dashed;border-color:rgba(255,255,255,.5)}
+.ltop{position:absolute;left:0;right:0;top:0;display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) 10px max(14px,env(safe-area-inset-left))}
+.lbtn{height:44px;min-width:44px;padding:0 16px;border:0;border-radius:99px;background:rgba(20,24,40,.72);color:#fff;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:8px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.lbtn.on{background:var(--tag);color:var(--tagink)}
+.lcount{flex:1;text-align:center;font-weight:700;font-size:17px;text-shadow:0 1px 4px rgba(0,0,0,.6)}
+.lmsg{position:absolute;left:50%;transform:translateX(-50%);top:calc(44% + min(39vw,31vh,260px) + 14px);background:rgba(20,24,40,.78);padding:8px 16px;border-radius:99px;font-weight:600;white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis}
+.lmsg.hit{background:var(--tag);color:var(--tagink)}.lmsg.dup{background:var(--dup);color:#2a1300}
+.lbot{position:absolute;left:0;right:0;bottom:0;padding:12px max(14px,env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));display:grid;gap:10px;
+ background:linear-gradient(transparent,rgba(0,0,0,.65) 30%)}
+.feed{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;min-height:40px}
+.chip{flex:none;display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.95);color:#0b1020;border-radius:10px;padding:6px 10px 6px 6px;font-size:14px;max-width:72vw}
+.chip b{background:var(--tag);color:var(--tagink);border-radius:6px;padding:2px 8px}
+.chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lctl{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.done{background:#fff;color:#0b1020;min-width:120px;height:52px;font-size:18px}
+/* sheets */
+.sheet{position:fixed;inset:0;background:rgba(5,8,20,.5);display:none;align-items:flex-end;justify-content:center;z-index:50}
+.sheet.on{display:flex}
+.panel{background:var(--card);width:100%;max-width:560px;border-radius:20px 20px 0 0;padding:20px max(18px,env(safe-area-inset-left)) calc(20px + env(safe-area-inset-bottom));max-height:90vh;overflow:auto}
+.panel h2{margin:0 0 14px;font-size:22px;line-height:1.1}
+label.f{display:block;font-size:14px;font-weight:600;color:var(--mute);margin:12px 0 6px}
+.in{width:100%;height:48px;border-radius:12px;border:1px solid var(--line);background:var(--bg);padding:0 14px;font-size:16px}
+.btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.b{flex:1 1 140px;min-height:48px;border-radius:12px;border:1px solid var(--line);background:var(--bg);font-weight:600;padding:6px 10px}
+.b.p{background:var(--blue2);border-color:var(--blue2);color:#fff}
+.b.d{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,var(--line))}
+.hint{font-size:14px;color:var(--mute);margin:8px 0 0}
+.toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;font-weight:600}
+.toggle input{width:24px;height:24px;accent-color:var(--blue2)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom));background:#0b1020;color:#fff;border-radius:12px;padding:10px 12px 10px 16px;
+ display:none;align-items:center;gap:14px;z-index:60;max-width:calc(100% - 32px);box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.toast.on{display:flex}.toast button{background:none;border:0;color:var(--tag);font-weight:700;min-height:44px;padding:0 6px}
+@media (prefers-reduced-motion:reduce){.item.fresh{animation:none}.win{transition:none}}
+</style>
+</head>
+<body>
+<header class="top"><div class="row">
+ <div class="ttl"><h1 id="listName">Part scanner</h1><div class="count" id="count">0 parts</div></div>
+ <button class="iconbtn" id="menuBtn" aria-label="List options"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+</div></header>
+
+<main class="wrap">
+ <p class="status" id="status" role="status">Loading the Data Matrix reader…</p>
+ <div class="shot" id="shot">
+  <canvas id="cv" width="10" height="10" aria-label="Last photo with decoded codes outlined"></canvas>
+  <span class="cap" id="shotCap"></span>
+  <button class="iconbtn x" id="shotClose" aria-label="Hide photo"><svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  <div class="busy">Reading codes…</div>
+ </div>
+ <ul class="list" id="list"></ul>
+ <div class="empty" id="empty"><b>No parts scanned yet</b>Tap <strong>Scan parts</strong> and hold the Data Matrix inside the window. Each new serial is added and tagged P1, P2, P3… Keep moving from part to part; repeats are ignored.</div>
+</main>
+
+<div class="dock"><div class="row">
+ <button class="scan" id="scanBtn"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><path d="M8 8h3v3H8zM13 13h3v3h-3zM13 8h3M8 13v3" stroke-width="1.8"/></svg>Scan parts</button>
+ <label class="side" title="Read codes from a photo"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 17l-5-5-9 8"/></svg>
+  <input type="file" accept="image/*" multiple id="libIn" aria-label="Read codes from a photo"></label>
+ <button class="side" id="typeBtn" aria-label="Type a serial"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg></button>
+</div></div>
+
+<div class="live" id="live" aria-label="Camera scanner">
+ <video id="vid" playsinline muted autoplay></video>
+ <div class="win" id="win"></div>
+ <div class="ltop">
+  <button class="lbtn" id="torchBtn" hidden aria-label="Torch"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M7 2h10v4l-3 4v12h-4V10L7 6z"/></svg></button>
+  <div class="lcount" id="lcount">0 parts</div>
+  <button class="lbtn" id="zoomBtn" hidden>1×</button>
+ </div>
+ <div class="lmsg" id="lmsg">Hold a Data Matrix in the window</div>
+ <div class="lbot">
+  <div class="feed" id="feed"></div>
+  <div class="lctl"><button class="lbtn" id="pauseBtn">Pause</button><button class="lbtn done" id="doneBtn">Done</button></div>
+ </div>
+</div>
+
+<div class="sheet" id="editSheet"><form class="panel" id="editForm">
+ <h2 id="editTitle">Edit part</h2>
+ <label class="f" for="eLabel">Label</label><input class="in" id="eLabel" autocomplete="off" autocapitalize="characters">
+ <label class="f" for="eSerial">Serial number</label><input class="in mono" id="eSerial" autocomplete="off" autocapitalize="off" spellcheck="false">
+ <p class="hint" id="eHint"></p>
+ <div class="btns"><button type="button" class="b d" id="eDel">Delete</button><button type="button" class="b" data-close>Cancel</button><button class="b p">Save</button></div>
+</form></div>
+
+<div class="sheet" id="menuSheet"><div class="panel">
+ <h2>List options</h2>
+ <label class="f" for="nameIn">List name</label>
+ <input class="in" id="nameIn" maxlength="40" autocomplete="off" placeholder="Part scanner">
+ <label class="f" for="prefix">Label prefix for new parts</label>
+ <input class="in" id="prefix" maxlength="12" autocomplete="off" autocapitalize="characters">
+ <p class="hint" id="nextHint"></p>
+ <label class="toggle">Beep on each new part<input type="checkbox" id="beepIn"></label>
+ <div class="btns">
+  <button class="b p" id="shareCsv" hidden>Share CSV</button>
+  <button class="b" id="dlCsv">Download CSV</button>
+  <button class="b" id="copyCsv">Copy for Excel</button>
+  <button class="b" id="renum">Renumber in order</button>
+  <button class="b d" id="clearAll">Clear list</button>
+ </div>
+ <p class="hint" id="menuMsg" role="status"></p>
+ <p class="hint">Saved on this phone only. Export before clearing or deleting the app.</p>
+ <div class="btns"><button class="b p" data-close>Done</button></div>
+</div></div>
+
+<div class="sheet" id="confirmSheet"><div class="panel">
+ <h2 id="cTitle">Are you sure?</h2><p class="hint" id="cText"></p>
+ <div class="btns"><button class="b" data-close>Cancel</button><button class="b d" id="cGo">Confirm</button></div>
+</div></div>
+
+<div class="toast" id="toast"><span id="toastMsg"></span><button id="toastUndo" hidden>Undo</button></div>
+
+<script>
+{
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ls={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch{return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch{return false}}};
+const K={items:'dmscan.items',prefix:'dmscan.prefix',name:'dmscan.name',beep:'dmscan.beep'};
+const S={items:ls.get(K.items,[]),prefix:ls.get(K.prefix,'P'),name:ls.get(K.name,''),beep:ls.get(K.beep,true),fresh:new Set()};
+if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
+
+/* ---------- decoder (Web Worker) ---------- */
+let worker=null,wReady=false,native=null,reqId=0;const pending=new Map();
+function startWorker(){
+ try{worker=new Worker('worker.js')}catch{worker=null}
+ if(!worker){fallback();return}
+ worker.onmessage=e=>{const m=e.data;
+  if(m.type==='ready'){wReady=true;setStatus('Ready. Tap Scan parts to start.')}
+  else if(m.type==='failed'){worker=null;fallback()}
+  else if(m.type==='result'){const p=pending.get(m.id);if(p){pending.delete(m.id);p(m.results)}}};
+ worker.onerror=()=>{if(!wReady){worker=null;fallback()}};
+}
+async function fallback(){
+ if('BarcodeDetector' in window){try{const f=await BarcodeDetector.getSupportedFormats();if(f.includes('data_matrix')){native=new BarcodeDetector({formats:['data_matrix']});setStatus('Ready. Tap Scan parts to start.');return}}catch{}}
+ setStatus('The code reader could not start on this phone. You can still type serials.','err');
+}
+const canDecode=()=>(worker&&wReady)||native;
+function decodeImageData(d,quick){
+ if(worker&&wReady)return new Promise(ok=>{const id=++reqId;pending.set(id,ok);worker.postMessage({id,w:d.width,h:d.height,buf:d.data.buffer,quick},[d.data.buffer])});
+ if(native){const c=document.createElement('canvas');c.width=d.width;c.height=d.height;c.getContext('2d').putImageData(d,0,0);
+  return native.detect(c).then(r=>r.map(x=>({text:x.rawValue,pts:x.cornerPoints.map(p=>[p.x,p.y])}))).catch(()=>[])}
+ return Promise.resolve([]);
+}
+const clean=t=>String(t).replace(/[\x00-\x1f\x7f]/g,' ').replace(/\s+/g,' ').trim();
+
+/* ---------- live camera ---------- */
+const L={stream:null,track:null,running:false,paused:false,seen:new Map(),canvas:document.createElement('canvas'),zoomLevels:[1],zi:0,torch:false,timer:0};
+let actx=null;
+function beep(ok){if(!S.beep||!actx)return;try{const o=actx.createOscillator(),g=actx.createGain();o.frequency.value=ok?1760:440;o.type='square';g.gain.setValueAtTime(.12,actx.currentTime);g.gain.exponentialRampToValueAtTime(.001,actx.currentTime+(ok?.12:.2));o.connect(g).connect(actx.destination);o.start();o.stop(actx.currentTime+.22)}catch{}}
+async function openScanner(){
+ if(!canDecode()){setStatus('The code reader is still loading. Try again in a moment.','err');return}
+ if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){setStatus('This browser can’t use the camera. Use the photo button instead.','err');return}
+ try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();actx.resume()}catch{}
+ $('live').classList.add('on');setLive('Starting camera…');updateCounts();renderFeed();
+ try{
+  L.stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}});
+ }catch(e){closeScanner();setStatus(e&&e.name==='NotAllowedError'?'Camera access was blocked. Allow the camera for this site in Settings, or use the photo button.':'Couldn’t start the camera. Use the photo button instead.','err');return}
+ const v=$('vid');v.srcObject=L.stream;try{await v.play()}catch{}
+ L.track=L.stream.getVideoTracks()[0];setupTrackControls();
+ L.running=true;L.paused=false;$('pauseBtn').textContent='Pause';$('win').classList.remove('paused');setLive('Hold a Data Matrix in the window');
+ loop();
+}
+function setupTrackControls(){
+ let caps={};try{caps=L.track.getCapabilities?L.track.getCapabilities():{}}catch{}
+ $('torchBtn').hidden=!caps.torch;L.torch=false;$('torchBtn').classList.remove('on');
+ L.zoomLevels=[1];L.zi=0;
+ if(caps.zoom&&caps.zoom.max>=1.5){const lo=Math.max(1,caps.zoom.min||1);L.zoomLevels=[lo,Math.min(2,caps.zoom.max)];if(caps.zoom.max>=3)L.zoomLevels.push(3)}
+ $('zoomBtn').hidden=L.zoomLevels.length<2;$('zoomBtn').textContent='1×';
+}
+function closeScanner(){
+ L.running=false;clearTimeout(L.timer);
+ if(L.stream)L.stream.getTracks().forEach(t=>t.stop());L.stream=null;L.track=null;$('vid').srcObject=null;
+ $('live').classList.remove('on');render();
+}
+function cropRect(){
+ const v=$('vid'),vw=v.videoWidth,vh=v.videoHeight;if(!vw||!vh)return null;
+ const r=v.getBoundingClientRect(),w=$('win').getBoundingClientRect();
+ const s=Math.max(r.width/vw,r.height/vh),ox=(r.width-vw*s)/2,oy=(r.height-vh*s)/2;
+ const pad=w.width*.08;
+ let x=(w.left-pad-r.left-ox)/s,y=(w.top-pad-r.top-oy)/s,cw=(w.width+2*pad)/s,ch=(w.height+2*pad)/s;
+ x=Math.max(0,x);y=Math.max(0,y);cw=Math.min(vw-x,cw);ch=Math.min(vh-y,ch);
+ return{x,y,w:cw,h:ch};
+}
+async function loop(){
+ if(!L.running)return;
+ if(L.paused||document.hidden){L.timer=setTimeout(loop,250);return}
+ const c=cropRect();
+ if(c&&c.w>20){
+  const M=1100,k=Math.min(1,M/Math.max(c.w,c.h)),cv=L.canvas;cv.width=Math.round(c.w*k);cv.height=Math.round(c.h*k);
+  const g=cv.getContext('2d',{willReadFrequently:true});g.drawImage($('vid'),c.x,c.y,c.w,c.h,0,0,cv.width,cv.height);
+  const res=await decodeImageData(g.getImageData(0,0,cv.width,cv.height),true);
+  if(L.running)handleLive(res);
+ }
+ L.timer=setTimeout(loop,80);
+}
+function handleLive(res){
+ const now=Date.now();let hit=null,dup=null;
+ for(const r of res){
+  const serial=clean(r.text);if(!serial)continue;
+  const last=L.seen.get(serial);L.seen.set(serial,now);
+  if(last&&now-last<2500)continue;
+  const ex=S.items.find(x=>x.serial===serial);
+  if(ex){dup=ex;continue}
+  const it={id:newId(),serial,label:nextLabel(),ts:stamp()};put(it);S.fresh.add(it.id);hit=it;
+ }
+ if(hit){flash('hit',`Added ${hit.label} · ${hit.serial}`);beep(true);if(navigator.vibrate)navigator.vibrate(60);renderFeed();updateCounts()}
+ else if(dup){flash('dup',`Already in list as ${dup.label}`);beep(false)}
+}
+let flashT=0;
+function flash(kind,msg){const w=$('win'),m=$('lmsg');w.classList.remove('hit','dup');m.classList.remove('hit','dup');void w.offsetWidth;w.classList.add(kind);m.classList.add(kind);m.textContent=msg;
+ clearTimeout(flashT);flashT=setTimeout(()=>{w.classList.remove('hit','dup');m.classList.remove('hit','dup');m.textContent=L.paused?'Paused':'Hold a Data Matrix in the window'},1600)}
+function setLive(t){$('lmsg').textContent=t}
+function renderFeed(){const last=[...S.items].sort((a,b)=>b.ts-a.ts).slice(0,6);
+ $('feed').innerHTML=last.map(it=>`<div class="chip"><b>${esc(it.label)}</b><span class="mono">${esc(it.serial)}</span></div>`).join('')}
+function updateCounts(){const n=S.items.length,t=n+(n===1?' part':' parts');$('count').textContent=t;$('lcount').textContent=t}
+$('scanBtn').addEventListener('click',openScanner);
+$('doneBtn').addEventListener('click',closeScanner);
+$('pauseBtn').addEventListener('click',()=>{L.paused=!L.paused;$('pauseBtn').textContent=L.paused?'Resume':'Pause';$('win').classList.toggle('paused',L.paused);setLive(L.paused?'Paused':'Hold a Data Matrix in the window')});
+$('torchBtn').addEventListener('click',async()=>{if(!L.track)return;L.torch=!L.torch;try{await L.track.applyConstraints({advanced:[{torch:L.torch}]});$('torchBtn').classList.toggle('on',L.torch)}catch{L.torch=false}});
+$('zoomBtn').addEventListener('click',async()=>{if(!L.track)return;L.zi=(L.zi+1)%L.zoomLevels.length;const z=L.zoomLevels[L.zi];
+ try{await L.track.applyConstraints({advanced:[{zoom:z}]});$('zoomBtn').textContent=(L.zi===0?1:Math.round(z/L.zoomLevels[0]*10)/10)+'×'}catch{}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&L.running)closeScanner()});
+
+/* ---------- photos ---------- */
+const dims=(w,h,M)=>{const s=Math.min(1,M/Math.max(w,h));return[Math.round(w*s),Math.round(h*s)]};
+async function loadImage(file){
+ let src;
+ try{src=await createImageBitmap(file)}catch{
+  src=await new Promise((ok,no)=>{const im=new Image();const u=URL.createObjectURL(file);im.onload=()=>{URL.revokeObjectURL(u);ok(im)};im.onerror=()=>{URL.revokeObjectURL(u);no(new Error('img'))};im.src=u});
+ }
+ const W=src.width||src.naturalWidth,H=src.height||src.naturalHeight,[w,h]=dims(W,H,2400);
+ const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(src,0,0,w,h);if(src.close)src.close();return c;
+}
+async function handleFiles(files){
+ if(!files.length)return;
+ if(!canDecode()){setStatus('The code reader is still loading. Try again in a moment.','err');return}
+ $('shot').classList.add('on','working');
+ let added=0,dupes=[],none=0;
+ for(const f of files){
+  let c;try{c=await loadImage(f)}catch{none++;continue}
+  drawShot(c,[]);
+  let res=await decodeImageData(c.getContext('2d').getImageData(0,0,c.width,c.height),false);
+  if(!res.length&&Math.max(c.width,c.height)>1400){const[w,h]=dims(c.width,c.height,1200),c2=document.createElement('canvas');c2.width=w;c2.height=h;c2.getContext('2d').drawImage(c,0,0,w,h);
+   const k=c.width/w;res=(await decodeImageData(c2.getContext('2d').getImageData(0,0,w,h),false)).map(r=>({...r,pts:r.pts.map(([x,y])=>[x*k,y*k])}))}
+  res.sort((a,b)=>{const ay=Math.min(...a.pts.map(p=>p[1])),by=Math.min(...b.pts.map(p=>p[1])),ax=Math.min(...a.pts.map(p=>p[0])),bx=Math.min(...b.pts.map(p=>p[0]));return Math.abs(ay-by)>c.height*.06?ay-by:ax-bx});
+  const marks=[];
+  for(const r of res){const serial=clean(r.text);if(!serial)continue;
+   const ex=S.items.find(x=>x.serial===serial);
+   if(ex){dupes.push(ex.label);marks.push({pts:r.pts,label:ex.label,dup:true});continue}
+   const it={id:newId(),serial,label:nextLabel(),ts:stamp()};put(it);S.fresh.add(it.id);added++;marks.push({pts:r.pts,label:it.label})}
+  if(!res.length)none++;
+  drawShot(c,marks);
+ }
+ $('shot').classList.remove('working');
+ const n=added+dupes.length;
+ if(!n){setStatus('No Data Matrix found. Get closer, fill the frame, avoid glare, then try again.','err');$('shotCap').textContent='No code found'}
+ else{const parts=[];if(added)parts.push(`Added ${added} part${added>1?'s':''}`);if(dupes.length)parts.push(`already in list as ${dupes.join(', ')}`);
+  const msg=parts.join(' · ');setStatus(msg.charAt(0).toUpperCase()+msg.slice(1)+(none?` · ${none} photo${none>1?'s':''} had no code`:''),added?'good':'');$('shotCap').textContent=`${n} code${n===1?'':'s'} read`}
+ render();
+}
+function drawShot(src,marks){
+ const cv=$('cv'),[w,h]=dims(src.width,src.height,1100);cv.width=w;cv.height=h;const g=cv.getContext('2d');g.drawImage(src,0,0,w,h);const k=w/src.width;
+ for(const m of marks){const p=m.pts.map(([x,y])=>[x*k,y*k]),col=m.dup?'#ff8a3d':'#ffd21f';
+  g.lineWidth=Math.max(3,w/180);g.strokeStyle=col;g.beginPath();p.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));g.closePath();g.stroke();
+  const fs=Math.max(16,w/26);g.font=`700 ${fs}px system-ui,sans-serif`;const tw=g.measureText(m.label).width+fs*.8;
+  let x=Math.min(...p.map(q=>q[0])),y=Math.min(...p.map(q=>q[1]))-fs*1.5;if(y<4)y=Math.max(...p.map(q=>q[1]))+6;x=Math.max(4,Math.min(w-tw-4,x));
+  g.fillStyle=col;g.fillRect(x,y,tw,fs*1.35);g.fillStyle='#2a2100';g.fillText(m.label,x+fs*.4,y+fs*1.02)}
+}
+$('libIn').addEventListener('change',e=>{handleFiles([...e.target.files]);e.target.value=''});
+$('shotClose').addEventListener('click',()=>$('shot').classList.remove('on'));
+
+/* ---------- data ---------- */
+function nextLabel(){const re=new RegExp('^'+S.prefix.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'(\\d+)$','i');let n=0;
+ for(const it of S.items){const m=re.exec(it.label);if(m)n=Math.max(n,+m[1])}return S.prefix+(n+1)}
+let lastTs=0;const stamp=()=>(lastTs=Math.max(Date.now(),lastTs+1));
+const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+function save(){if(!ls.set(K.items,S.items))setStatus('Couldn’t save on this phone. Export the list now.','err')}
+function put(it){const i=S.items.findIndex(x=>x.id===it.id);if(i<0)S.items.push(it);else S.items[i]=it;save();if(!$('live').classList.contains('on'))render()}
+function del(id){S.items=S.items.filter(x=>x.id!==id);save();render()}
+
+/* ---------- render ---------- */
+function fmt(ts){const d=new Date(ts);return d.toLocaleDateString(undefined,{day:'numeric',month:'short'})+' '+d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})}
+function render(){
+ const items=[...S.items].sort((a,b)=>b.ts-a.ts);updateCounts();
+ $('listName').textContent=S.name||'Part scanner';document.title=S.name||'Part Scanner';
+ $('empty').hidden=items.length>0;
+ $('list').innerHTML=items.map(it=>`<li><button class="item${S.fresh.has(it.id)?' fresh':''}" data-id="${esc(it.id)}"><span class="tag">${esc(it.label||'—')}</span><span><div class="serial mono">${esc(it.serial)}</div><div class="meta">${esc(fmt(it.ts))}</div></span></button></li>`).join('');
+ S.fresh.clear();$('nextHint').textContent='Next new part will be '+nextLabel()+'.';
+}
+function setStatus(t,c){const s=$('status');s.textContent=t;s.className='status'+(c?' '+c:'')}
+
+/* ---------- sheets ---------- */
+const open=id=>$(id).classList.add('on'),close=id=>$(id).classList.remove('on');
+document.querySelectorAll('.sheet').forEach(s=>s.addEventListener('click',e=>{if(e.target===s||e.target.closest('[data-close]'))s.classList.remove('on')}));
+let editing=null;
+$('list').addEventListener('click',e=>{const b=e.target.closest('.item');if(!b)return;const it=S.items.find(x=>x.id===b.dataset.id);if(!it)return;
+ editing=it.id;$('editTitle').textContent='Edit part';$('eLabel').value=it.label;$('eSerial').value=it.serial;$('eHint').textContent='Scanned '+fmt(it.ts);$('eDel').hidden=false;open('editSheet')});
+$('typeBtn').addEventListener('click',()=>{editing=null;$('editTitle').textContent='Add a serial by hand';$('eLabel').value=nextLabel();$('eSerial').value='';$('eHint').textContent='For a code that won’t scan.';$('eDel').hidden=true;open('editSheet');setTimeout(()=>$('eSerial').focus(),50)});
+$('editForm').addEventListener('submit',e=>{e.preventDefault();
+ const label=$('eLabel').value.trim(),serial=$('eSerial').value.trim();
+ if(!serial){$('eHint').textContent='Enter a serial number.';return}
+ const dup=S.items.find(x=>x.serial===serial&&x.id!==editing);if(dup){$('eHint').textContent='That serial is already in the list as '+dup.label+'.';return}
+ if(editing){const it=S.items.find(x=>x.id===editing);if(it&&(it.label!==label||it.serial!==serial))put({...it,label,serial})}
+ else{const it={id:newId(),serial,label:label||nextLabel(),ts:stamp()};S.fresh.add(it.id);put(it)}
+ close('editSheet')});
+let undoItem=null,toastT=null;
+$('eDel').addEventListener('click',()=>{const it=S.items.find(x=>x.id===editing);if(!it)return;close('editSheet');undoItem=it;del(it.id);toast(`Deleted ${it.label}`,true)});
+function toast(m,undo){$('toastMsg').textContent=m;$('toastUndo').hidden=!undo;$('toast').classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>$('toast').classList.remove('on'),undo?6000:2500)}
+$('toastUndo').addEventListener('click',()=>{if(undoItem){put(undoItem);undoItem=null}$('toast').classList.remove('on')});
+
+$('menuBtn').addEventListener('click',()=>{$('prefix').value=S.prefix;$('nameIn').value=S.name;$('beepIn').checked=S.beep;$('menuMsg').textContent='';render();open('menuSheet')});
+$('prefix').addEventListener('input',e=>{S.prefix=e.target.value.trim()||'P';ls.set(K.prefix,S.prefix);$('nextHint').textContent='Next new part will be '+nextLabel()+'.'});
+$('nameIn').addEventListener('input',e=>{S.name=e.target.value.trim();ls.set(K.name,S.name);$('listName').textContent=S.name||'Part scanner'});
+$('beepIn').addEventListener('change',e=>{S.beep=e.target.checked;ls.set(K.beep,S.beep)});
+function csv(sep){const rows=[...S.items].sort((a,b)=>a.ts-b.ts).map(it=>{const d=new Date(it.ts),p=n=>String(n).padStart(2,'0');
+  return[it.label,it.serial,`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`]});
+ const cell=v=>{v=String(v);if(sep==='\t')return v.replace(/[\t\n]/g,' ');if(/^[=+\-@]/.test(v))v="'"+v;return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+ return [['Label','Serial','Scanned'],...rows].map(r=>r.map(cell).join(sep)).join('\r\n')}
+function fileName(){const d=new Date(),p=n=>String(n).padStart(2,'0');const base=(S.name||'part-serials').replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'-')||'part-serials';
+ return `${base}-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.csv`}
+const csvFile=()=>new File(['﻿'+csv(',')],fileName(),{type:'text/csv'});
+if(navigator.canShare){try{if(navigator.canShare({files:[new File(['x'],'t.csv',{type:'text/csv'})]}))$('shareCsv').hidden=false}catch{}}
+$('shareCsv').addEventListener('click',async()=>{if(!S.items.length){$('menuMsg').textContent='Nothing to share yet.';return}
+ try{await navigator.share({files:[csvFile()],title:fileName()});$('menuMsg').textContent='Shared.'}catch(e){if(e&&e.name!=='AbortError')$('menuMsg').textContent='Sharing didn’t work here. Try Download CSV.'}});
+$('dlCsv').addEventListener('click',()=>{if(!S.items.length){$('menuMsg').textContent='Nothing to download yet.';return}
+ const f=csvFile(),u=URL.createObjectURL(f),a=document.createElement('a');a.href=u;a.download=f.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);$('menuMsg').textContent='Saved '+f.name+'.'});
+$('copyCsv').addEventListener('click',async()=>{if(!S.items.length){$('menuMsg').textContent='Nothing to copy yet.';return}
+ try{await navigator.clipboard.writeText(csv('\t'));$('menuMsg').textContent='Copied '+S.items.length+' rows. Paste straight into Excel.'}catch{$('menuMsg').textContent='Copy was blocked on this phone.'}});
+function confirmBox(title,text,go){$('cTitle').textContent=title;$('cText').textContent=text;$('cGo').onclick=()=>{close('confirmSheet');go()};open('confirmSheet')}
+$('renum').addEventListener('click',()=>{if(!S.items.length)return;close('menuSheet');
+ confirmBox('Renumber all parts?',`Labels become ${S.prefix}1 to ${S.prefix}${S.items.length} in the order they were scanned. Custom labels are replaced.`,()=>{
+  [...S.items].sort((a,b)=>a.ts-b.ts).forEach((it,i)=>{it.label=S.prefix+(i+1)});save();render();toast('Renumbered')})});
+$('clearAll').addEventListener('click',()=>{if(!S.items.length)return;close('menuSheet');
+ confirmBox('Clear the whole list?',`This removes all ${S.items.length} parts from this phone. Export them first if you need them.`,()=>{S.items=[];save();render();toast('List cleared');$('shot').classList.remove('on')})});
+
+if('serviceWorker' in navigator&&window.isSecureContext)navigator.serviceWorker.register('sw.js').catch(()=>{});
+render();startWorker();
+}
+</script>
+</body>
+</html>
