@@ -391,7 +391,7 @@ function csv(sep){const rows=[...S.items].sort((a,b)=>a.ts-b.ts).map(it=>{const 
   return[it.label,it.serial,`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`]});
  const cell=v=>{v=String(v);if(sep==='\t')return v.replace(/[\t\n]/g,' ');if(/^[=+\-@]/.test(v))v="'"+v;return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
  return [['Label','Serial','Scanned'],...rows].map(r=>r.map(cell).join(sep)).join('\r\n')}
-function fileName(){const d=new Date(),p=n=>String(n).padStart(2,'0');const base=(S.name||'AD-Scan').replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'-')||'part-serials';
+function fileName(){const d=new Date(),p=n=>String(n).padStart(2,'0');const base=(S.name||'AD-Scan').replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'-')||'AD-Scan';
  return `${base}-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.csv`}
 const csvFile=()=>new File(['﻿'+csv(',')],fileName(),{type:'text/csv'});
 if(navigator.canShare){try{if(navigator.canShare({files:[new File(['x'],'t.csv',{type:'text/csv'})]}))$('shareCsv').hidden=false}catch{}}
