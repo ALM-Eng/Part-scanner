@@ -1,5 +1,5 @@
-// Offline cache for Part Scanner. Bump VERSION when you change any file.
-const VERSION = 'part-scanner-v1';
+// Offline cache for AD Scan. Bump VERSION when you change any file.
+const VERSION = 'part-scanner-v2';
 const FILES = ['./', 'index.html', 'worker.js', 'zxing-reader.js', 'zxing_reader.wasm', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png'];
 
