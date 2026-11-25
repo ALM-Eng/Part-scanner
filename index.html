@@ -121,6 +121,8 @@ label.f{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:1
 .ldel{border:0;border-left:1px solid var(--line);background:none;width:52px;color:var(--fail);display:grid;place-items:center}
 .newrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
 .newrow .b{flex:none;min-width:96px}
+.in.ta{height:auto;min-height:88px;padding:10px 12px;line-height:1.4;resize:vertical;display:block}
+.hint.warn{color:var(--fail)}
 @media (max-width:370px){.logo{height:32px}.ttl{padding-left:10px}.h1{font-size:17px}}
 @media (prefers-reduced-motion:reduce){.item.fresh{animation:none}.win{transition:none}}
 </style>
@@ -171,7 +173,7 @@ M 5.82,11.72 L 13.25,6.62 L 13.40,6.40 L 14.05,5.97 L 14.42,5.89 L 23.01,11.72 L
 
 <div class="sheet" id="editSheet"><form class="panel" id="editForm">
  <h2 id="editTitle">Edit part</h2>
- <label class="f" for="eLabel">Label</label><input class="in" id="eLabel" autocomplete="off" autocapitalize="characters">
+ <label class="f" for="eLabel">Label</label><input class="in" id="eLabel" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
  <label class="f" for="eSerial">Serial number</label><input class="in mono" id="eSerial" autocomplete="off" autocapitalize="off" spellcheck="false">
  <p class="hint" id="eHint"></p>
  <div class="btns"><button type="button" class="b d" id="eDel">Delete</button><button type="button" class="b" data-close>Cancel</button><button class="b p">Save</button></div>
@@ -181,20 +183,30 @@ M 5.82,11.72 L 13.25,6.62 L 13.40,6.40 L 14.05,5.97 L 14.42,5.89 L 23.01,11.72 L
  <h2>List options</h2>
  <label class="f" for="nameIn">List name</label>
  <input class="in" id="nameIn" maxlength="40" autocomplete="off" placeholder="Serial list">
- <label class="f" for="prefix">Label prefix for new parts</label>
- <input class="in" id="prefix" maxlength="12" autocomplete="off" autocapitalize="characters">
- <p class="hint" id="nextHint"></p>
- <label class="toggle">Beep on each new part<input type="checkbox" id="beepIn"></label>
  <div class="btns">
-  <button class="b" id="openLists">Saved lists</button>
+  <button class="b p" id="emailList">Email list</button>
   <button class="b p" id="shareCsv" hidden>Share CSV</button>
   <button class="b" id="dlCsv">Download CSV</button>
   <button class="b" id="copyCsv">Copy for Excel</button>
   <button class="b" id="renum">Renumber in order</button>
+  <button class="b" id="openLists">Saved lists</button>
+  <button class="b" id="openSettings">Settings</button>
   <button class="b d" id="clearAll">Clear list</button>
  </div>
  <p class="hint" id="menuMsg" role="status"></p>
  <p class="hint">Lists are saved on this phone only. Export before clearing a list or deleting the app.</p>
+ <div class="btns"><button class="b p" data-close>Done</button></div>
+</div></div>
+
+<div class="sheet" id="setSheet"><div class="panel">
+ <h2>Settings</h2>
+ <label class="f" for="emailsIn">Default email recipients</label>
+ <textarea class="in ta" id="emailsIn" rows="3" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="email" placeholder="name@company.com, another@company.com"></textarea>
+ <p class="hint" id="emailsHint"></p>
+ <label class="f" for="prefix">Label prefix for new parts</label>
+ <input class="in" id="prefix" maxlength="12" autocomplete="off" autocapitalize="characters">
+ <p class="hint" id="nextHint"></p>
+ <label class="toggle">Beep on each new part<input type="checkbox" id="beepIn"></label>
  <div class="btns"><button class="b p" data-close>Done</button></div>
 </div></div>
 
@@ -220,7 +232,7 @@ M 5.82,11.72 L 13.25,6.62 L 13.40,6.40 L 14.05,5.97 L 14.42,5.89 L 23.01,11.72 L
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ls={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch{return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch{return false}}};
-const K={items:'dmscan.items',prefix:'dmscan.prefix',name:'dmscan.name',beep:'dmscan.beep',lists:'dmscan.lists',cur:'dmscan.current'};
+const K={items:'dmscan.items',prefix:'dmscan.prefix',name:'dmscan.name',beep:'dmscan.beep',lists:'dmscan.lists',cur:'dmscan.current',emails:'dmscan.emails'};
 const lid=()=>'L'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 let LISTS=ls.get(K.lists,null);
 if(!Array.isArray(LISTS)||!LISTS.length){const now=Date.now();LISTS=[{id:lid(),name:ls.get(K.name,''),items:ls.get(K.items,[]),created:now,updated:now}]}
@@ -431,7 +443,7 @@ function fileName(){const d=new Date(),p=n=>String(n).padStart(2,'0');const base
 const csvFile=()=>new File(['﻿'+csv(',')],fileName(),{type:'text/csv'});
 if(navigator.canShare){try{if(navigator.canShare({files:[new File(['x'],'t.csv',{type:'text/csv'})]}))$('shareCsv').hidden=false}catch{}}
 $('shareCsv').addEventListener('click',async()=>{if(!S.items.length){$('menuMsg').textContent='Nothing to share yet.';return}
- try{await navigator.share({files:[csvFile()],title:fileName()});$('menuMsg').textContent='Shared.'}catch(e){if(e&&e.name!=='AbortError')$('menuMsg').textContent='Sharing didn’t work here. Try Download CSV.'}});
+ try{await navigator.share({files:[csvFile()],title:mailSubject()});$('menuMsg').textContent='Shared.'}catch(e){if(e&&e.name!=='AbortError')$('menuMsg').textContent='Sharing didn’t work here. Try Download CSV.'}});
 $('dlCsv').addEventListener('click',()=>{if(!S.items.length){$('menuMsg').textContent='Nothing to download yet.';return}
  const f=csvFile(),u=URL.createObjectURL(f),a=document.createElement('a');a.href=u;a.download=f.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);$('menuMsg').textContent='Saved '+f.name+'.'});
 $('copyCsv').addEventListener('click',async()=>{if(!S.items.length){$('menuMsg').textContent='Nothing to copy yet.';return}
@@ -442,6 +454,28 @@ $('renum').addEventListener('click',()=>{if(!S.items.length)return;close('menuSh
   [...S.items].sort((a,b)=>a.ts-b.ts).forEach((it,i)=>{it.label=S.prefix+(i+1)});save();render();toast('Renumbered')})});
 $('clearAll').addEventListener('click',()=>{if(!S.items.length)return;close('menuSheet');
  confirmBox('Clear the whole list?',`This removes all ${S.items.length} parts from this phone. Export them first if you need them.`,()=>{S.items=[];save();render();toast('List cleared');$('shot').classList.remove('on')})});
+
+/* ---------- email + settings ---------- */
+const EMAIL_RE=/^[^\s@,;<>"'()]+@[^\s@,;<>"'()]+\.[^\s@,;<>"'()]+$/;
+function parseEmails(t){const parts=String(t||'').split(/[\s,;]+/).filter(Boolean);return{ok:[...new Set(parts.filter(x=>EMAIL_RE.test(x)))],bad:parts.filter(x=>!EMAIL_RE.test(x))}}
+function emailsHint(){const{ok,bad}=parseEmails($('emailsIn').value),h=$('emailsHint');
+ if(bad.length){h.textContent='Not a valid address: '+bad.join(', ');h.className='hint warn'}
+ else{h.textContent=ok.length?`Email list will go to ${ok.length} address${ok.length===1?'':'es'}. You can still change them in Mail before sending.`:'Separate addresses with commas or new lines. Email list fills these in for you.';h.className='hint'}}
+function mailSubject(){const n=S.items.length,d=new Date().toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'});
+ return `ALM Scan: ${S.name||'Serial list'} (${n} part${n===1?'':'s'}) ${d}`}
+function mailBody(){
+ const rows=[...S.items].sort((a,b)=>a.ts-b.ts).map(it=>{const d=new Date(it.ts),p=n=>String(n).padStart(2,'0');
+  return [it.label,it.serial,`${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`].map(v=>String(v).replace(/[\t\r\n]/g,' ')).join('\t')});
+ return `${S.name||'Serial list'}: ${S.items.length} part${S.items.length===1?'':'s'}\n\n`+['Label\tSerial\tScanned',...rows].join('\n')+'\n\nTo put this in Excel, copy the table above and paste it into cell A1.\nSent from ALM Scan'}
+$('emailList').addEventListener('click',()=>{
+ if(!S.items.length){$('menuMsg').textContent='Nothing to email yet.';return}
+ const to=parseEmails(ls.get(K.emails,'')).ok.join(',');
+ const href='mailto:'+to+'?subject='+encodeURIComponent(mailSubject())+'&body='+encodeURIComponent(mailBody());
+ const a=document.createElement('a');a.href=href;a.rel='noopener';document.body.appendChild(a);a.click();a.remove();
+ $('menuMsg').textContent=to?'Opening Mail with your default recipients.':'Opening Mail. Add default recipients in Settings to fill them in automatically.';
+});
+$('openSettings').addEventListener('click',()=>{close('menuSheet');$('emailsIn').value=ls.get(K.emails,'');$('prefix').value=S.prefix;$('beepIn').checked=S.beep;emailsHint();render();open('setSheet')});
+$('emailsIn').addEventListener('input',e=>{ls.set(K.emails,e.target.value);emailsHint()});
 
 /* ---------- saved lists ---------- */
 const listName=l=>l.name||'Serial list';

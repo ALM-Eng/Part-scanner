@@ -23,12 +23,13 @@ A phone web app that scans part Data Matrix codes with the live camera and keeps
 - The **keyboard** button lets you type in a serial that won't scan.
 - Tap the list name (or **Lists**) at the top to see your saved lists, open one, start a new list or delete one. Every list saves itself as you scan.
 - Tap any part to change its label or serial, or to delete it.
-- The **⋯** menu has the list name, the label prefix, beep on or off, Share CSV, Download CSV, Copy for Excel, Renumber and Clear.
+- The **⋯** menu has the list name, **Email list** (fills in your default recipients and subject, with the list in the email body), Share CSV, Download CSV, Copy for Excel, Renumber, Saved lists, Settings and Clear.
+- **Settings** holds your default email recipients, the label prefix and the beep.
 
 Your lists are saved on the phone only. They never go to GitHub. Export them before you clear the list or delete the app.
 
 ## Updating it later
 
-Upload the changed files to the same repository. In `sw.js`, change the version number at the end of `part-scanner-v6` (to `v7`, `v8`, and so on) so phones pick up the new version.
+Upload the changed files to the same repository. In `sw.js`, change the version number at the end of `part-scanner-v7` (to `v8`, `v9`, and so on) so phones pick up the new version.
 
 Data Matrix decoding uses zxing-wasm / zxing-cpp (MIT and Apache-2.0 licences; see ZXING-LICENSE.txt).
