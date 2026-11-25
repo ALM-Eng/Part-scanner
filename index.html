@@ -136,6 +136,10 @@ label.f{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:1
  font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:var(--shadow)}
 .mailbtn[hidden]{display:none}
 .mailbtn .n{font-weight:500;opacity:.8;font-size:16px}
+.shead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}.shead h2{margin:0!important}.tbtn[hidden]{display:none}
+.lists.reorder .lopen{cursor:default}
+.lists li.dragging{position:relative;z-index:5;box-shadow:0 10px 28px rgba(0,0,0,.25);border-color:var(--accent)}
+.lists li.dragging .handle{color:var(--accent)}
 .lren{border:0;border-left:1px solid var(--line);background:none;width:52px;color:var(--ink-2);display:grid;place-items:center}
 .ldel{border:0;border-left:1px solid var(--line);background:none;width:52px;color:var(--fail);display:grid;place-items:center}
 .newrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
@@ -240,8 +244,8 @@ M 5.82,11.72 L 13.25,6.62 L 13.40,6.40 L 14.05,5.97 L 14.42,5.89 L 23.01,11.72 L
 </div></div>
 
 <div class="sheet" id="listsSheet"><div class="panel">
- <h2>Saved lists</h2>
- <p class="hint">Every list saves itself as you scan. Tap a list to open it.</p>
+ <div class="shead"><h2>Saved lists</h2><button class="tbtn" id="listReorder" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4"/></svg>Reorder</button></div>
+ <p class="hint" id="listsHint">Every list saves itself as you scan. Tap a list to open it.</p>
  <ul class="lists" id="lists"></ul>
  <label class="f" for="newName">Start a new list</label>
  <div class="newrow"><input class="in" id="newName" maxlength="40" autocomplete="off" placeholder="Name, e.g. Order 4471"><button class="b p" id="newList">Start</button></div>
@@ -266,6 +270,7 @@ const lid=()=>'L'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 let LISTS=ls.get(K.lists,null);
 if(!Array.isArray(LISTS)||!LISTS.length){const now=Date.now();LISTS=[{id:lid(),name:ls.get(K.name,''),items:ls.get(K.items,[]),created:now,updated:now}]}
 LISTS=LISTS.filter(l=>l&&typeof l==='object').map(l=>({id:String(l.id||lid()),name:String(l.name||''),items:Array.isArray(l.items)?l.items:[],created:+l.created||Date.now(),updated:+l.updated||Date.now()}));
+if(!ls.get('dmscan.lorder',false)){LISTS.sort((a,b)=>b.updated-a.updated);ls.set('dmscan.lorder',true)}
 let CUR=LISTS.find(l=>l.id===ls.get(K.cur,''))||LISTS[0];
 const S={items:CUR.items,prefix:ls.get(K.prefix,'P'),name:CUR.name,beep:ls.get(K.beep,true),newestTop:ls.get(K.newest,true),fresh:new Set()};
 if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
@@ -441,7 +446,7 @@ function render(){
  $('reorderBtn').lastChild.textContent=reordering?'Done':'Reorder';$('reorderBtn').classList.toggle('p',reordering);$('renumMatch').hidden=!reordering;
  $('listName').textContent=S.name||'Serial list';document.title=S.name||'ALM Scan';
  $('empty').hidden=items.length>0;$('mailMain').hidden=!items.length;$('mailN').textContent=`(${items.length} part${items.length===1?'':'s'})`;
- $('list').innerHTML=items.map(it=>`<li data-id="${esc(it.id)}"><button class="item${S.fresh.has(it.id)?' fresh':''}" data-id="${esc(it.id)}"${reordering?' tabindex="-1"':''}><span class="tag">${esc(it.label||'—')}</span><span><div class="serial mono">${esc(it.serial)}</div><div class="meta">${esc(fmt(it.ts))}</div></span></button>${reordering?`<span class="handle" role="button" tabindex="0" aria-label="Move ${esc(it.label)}. Use the up and down arrow keys."><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 8h14M5 12h14M5 16h14"/></svg></span>`:''}</li>`).join('');
+ $('list').innerHTML=items.map(it=>`<li data-id="${esc(it.id)}"><button class="item${S.fresh.has(it.id)?' fresh':''}" data-id="${esc(it.id)}"${reordering?' tabindex="-1"':''}><span class="tag">${esc(it.label||'—')}</span><span><div class="serial mono">${esc(it.serial)}</div><div class="meta">${esc(fmt(it.ts))}</div></span></button>${reordering?HANDLE(it.label):''}</li>`).join('');
  S.fresh.clear();$('nextHint').textContent='Next new part will be '+nextLabel()+'.';
 }
 function setStatus(t,c){const s=$('status');s.textContent=t;s.className='status'+(c?' '+c:'')}
@@ -545,32 +550,40 @@ let drag=null;
 function dragMove(){if(!drag)return;const li=drag.li;li.style.transform=`translateY(${drag.y-drag.startY}px)`;
  const r=li.getBoundingClientRect(),mid=(r.top+r.bottom)/2;
  const nx=li.nextElementSibling,pv=li.previousElementSibling;
- const swap=(ref,after)=>{const before=li.offsetTop;$('list').insertBefore(li,after?ref.nextElementSibling:ref);drag.startY+=li.offsetTop-before;li.style.transform=`translateY(${drag.y-drag.startY}px)`;if(navigator.vibrate)navigator.vibrate(8)};
+ const swap=(ref,after)=>{const before=li.offsetTop;drag.box.insertBefore(li,after?ref.nextElementSibling:ref);drag.startY+=li.offsetTop-before;li.style.transform=`translateY(${drag.y-drag.startY}px)`;if(navigator.vibrate)navigator.vibrate(8)};
  if(nx){const q=nx.getBoundingClientRect();if(mid>q.top+q.height/2){swap(nx,true);return}}
  if(pv){const q=pv.getBoundingClientRect();if(mid<q.top+q.height/2){swap(pv,false)}}}
-function autoScroll(){if(!drag)return;const top=90,bot=innerHeight-110;let v=0;
- if(drag.y<top)v=-Math.min(16,(top-drag.y)/4+2);else if(drag.y>bot)v=Math.min(16,(drag.y-bot)/4+2);
- if(v){const y0=scrollY;scrollBy(0,v);const dv=scrollY-y0;if(dv){drag.startY-=dv;dragMove()}}
+function autoScroll(){if(!drag)return;const sc=drag.scroller,win=sc===window;
+ let top,bot;if(win){top=90;bot=innerHeight-110}else{const r=sc.getBoundingClientRect();top=r.top+60;bot=r.bottom-60}
+ let v=0;if(drag.y<top)v=-Math.min(16,(top-drag.y)/4+2);else if(drag.y>bot)v=Math.min(16,(drag.y-bot)/4+2);
+ if(v){const y0=win?scrollY:sc.scrollTop;if(win)scrollBy(0,v);else sc.scrollTop+=v;const dv=(win?scrollY:sc.scrollTop)-y0;if(dv){drag.startY-=dv;dragMove()}}
  drag.raf=requestAnimationFrame(autoScroll)}
-$('list').addEventListener('pointerdown',e=>{const h=e.target.closest('.handle');if(!h||!reordering)return;e.preventDefault();
- const li=h.closest('li');try{h.setPointerCapture(e.pointerId)}catch{}
- drag={li,h,startY:e.clientY,y:e.clientY,id:e.pointerId};li.classList.add('dragging');drag.raf=requestAnimationFrame(autoScroll)});
+function sortable(box,isOn,commit,scroller){
+ box.addEventListener('pointerdown',e=>{const h=e.target.closest('.handle');if(!h||!isOn())return;e.preventDefault();
+  const li=h.closest('li');try{h.setPointerCapture(e.pointerId)}catch{}
+  drag={box,li,commit,scroller,startY:e.clientY,y:e.clientY,id:e.pointerId};li.classList.add('dragging');drag.raf=requestAnimationFrame(autoScroll)});
+ box.addEventListener('keydown',e=>{const h=e.target.closest('.handle');if(!h||!isOn()||(e.key!=='ArrowUp'&&e.key!=='ArrowDown'))return;e.preventDefault();
+  const li=h.closest('li'),ref=e.key==='ArrowUp'?li.previousElementSibling:li.nextElementSibling;if(!ref)return;
+  box.insertBefore(li,e.key==='ArrowUp'?ref:ref.nextElementSibling);commit();h.focus()});
+}
 addEventListener('pointermove',e=>{if(!drag||e.pointerId!==drag.id)return;e.preventDefault();drag.y=e.clientY;dragMove()},{passive:false});
-function dragEnd(e){if(!drag||(e&&e.pointerId!==drag.id))return;cancelAnimationFrame(drag.raf);drag.li.style.transform='';drag.li.classList.remove('dragging');drag=null;commitOrder()}
+function dragEnd(e){if(!drag||(e&&e.pointerId!==drag.id))return;cancelAnimationFrame(drag.raf);drag.li.style.transform='';drag.li.classList.remove('dragging');const c=drag.commit;drag=null;c()}
 addEventListener('pointerup',dragEnd);addEventListener('pointercancel',dragEnd);addEventListener('blur',()=>dragEnd());document.addEventListener('visibilitychange',()=>{if(document.hidden)dragEnd()});
-$('list').addEventListener('keydown',e=>{const h=e.target.closest('.handle');if(!h||!reordering||(e.key!=='ArrowUp'&&e.key!=='ArrowDown'))return;e.preventDefault();
- const li=h.closest('li'),ref=e.key==='ArrowUp'?li.previousElementSibling:li.nextElementSibling;if(!ref)return;
- $('list').insertBefore(li,e.key==='ArrowUp'?ref:ref.nextElementSibling);commitOrder();h.focus()});
+sortable($('list'),()=>reordering,commitOrder,window);
+const HANDLE=label=>`<span class="handle" role="button" tabindex="0" aria-label="Move ${esc(label)}. Use the up and down arrow keys."><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 8h14M5 12h14M5 16h14"/></svg></span>`;
 
 /* ---------- saved lists ---------- */
 const listName=l=>l.name||'Serial list';
 function stampName(){const d=new Date();return 'List '+d.toLocaleDateString(undefined,{day:'numeric',month:'short'})+' '+d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})}
 function renderLists(){
- const ls2=[...LISTS].sort((a,b)=>(b.id===CUR.id)-(a.id===CUR.id)||b.updated-a.updated);
- $('lists').innerHTML=ls2.map(l=>{const n=l.items.length;
-  return `<li class="lrow${l.id===CUR.id?' cur':''}"><button class="lopen" data-id="${esc(l.id)}"><span class="lname">${esc(listName(l))}${l.id===CUR.id?'<span class="now">Open</span>':''}</span><span class="lmeta">${n} part${n===1?'':'s'} · ${esc(fmt(l.updated))}</span></button>`+
-  `<button class="lren" data-ren="${esc(l.id)}" aria-label="Rename ${esc(listName(l))}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg></button>`+
-  `<button class="ldel" data-del="${esc(l.id)}" aria-label="Delete ${esc(listName(l))}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg></button></li>`}).join('');
+ $('listReorder').hidden=LISTS.length<2;if(LISTS.length<2)listOrdering=false;
+ $('listReorder').lastChild.textContent=listOrdering?'Done':'Reorder';$('listReorder').classList.toggle('p',listOrdering);
+ $('lists').classList.toggle('reorder',listOrdering);
+ $('listsHint').textContent=listOrdering?'Drag \u2261 to move a list, then tap Done.':'Every list saves itself as you scan. Tap a list to open it.';
+ $('lists').innerHTML=LISTS.map(l=>{const n=l.items.length;
+  return `<li class="lrow${l.id===CUR.id?' cur':''}" data-id="${esc(l.id)}"><button class="lopen" data-id="${esc(l.id)}"${listOrdering?' tabindex="-1"':''}><span class="lname">${esc(listName(l))}${l.id===CUR.id?'<span class="now">Open</span>':''}</span><span class="lmeta">${n} part${n===1?'':'s'} · ${esc(fmt(l.updated))}</span></button>`+
+  (listOrdering?HANDLE(listName(l))+'</li>':`<button class="lren" data-ren="${esc(l.id)}" aria-label="Rename ${esc(listName(l))}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg></button>`+
+  `<button class="ldel" data-del="${esc(l.id)}" aria-label="Delete ${esc(listName(l))}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg></button></li>`)}).join('');
 }
 function switchTo(id,msg){
  save();const l=LISTS.find(x=>x.id===id);if(!l)return;
@@ -578,15 +591,20 @@ function switchTo(id,msg){
  undoItem=null;$('toast').classList.remove('on');$('shot').classList.remove('on');
  setStatus(msg||`Opened ${listName(l)}.`,'good');render();renderLists();
 }
-let renaming=null;
+let renaming=null,listOrdering=false;
+function commitListOrder(){const ids=[...$('lists').children].map(li=>li.dataset.id);const by=new Map(LISTS.map(l=>[l.id,l]));
+ const next=ids.map(id=>by.get(id)).filter(Boolean);if(next.length===LISTS.length&&next.some((x,i)=>x!==LISTS[i])){LISTS=next;ls.set(K.lists,LISTS)}}
+$('listReorder').addEventListener('click',()=>{listOrdering=!listOrdering;renderLists()});
+sortable($('lists'),()=>listOrdering,commitListOrder,$('listsSheet').querySelector('.panel'));
 $('renForm').addEventListener('submit',e=>{e.preventDefault();const l=LISTS.find(x=>x.id===renaming);if(!l){close('renSheet');return}
  const v=$('renIn').value.trim();l.name=v;if(l.id===CUR.id)S.name=v;
  const keep=l.updated;save();if(l.id!==CUR.id)l.updated=keep;ls.set(K.lists,LISTS);
  render();renderLists();close('renSheet');toast(`Renamed to ${listName(l)}`)});
-function openLists(){close('menuSheet');$('newName').value='';renderLists();open('listsSheet')}
+function openLists(){close('menuSheet');listOrdering=false;$('newName').value='';renderLists();open('listsSheet')}
 $('listsBtn').addEventListener('click',openLists);
 $('openLists').addEventListener('click',openLists);
 $('lists').addEventListener('click',e=>{
+ if(listOrdering)return;
  const o=e.target.closest('.lopen'),d=e.target.closest('.ldel'),r=e.target.closest('.lren');
  if(r){renaming=r.dataset.ren;const l=LISTS.find(x=>x.id===renaming);if(!l)return;$('renIn').value=l.name;open('renSheet');setTimeout(()=>{$('renIn').focus();$('renIn').select()},60);return}
  if(o){if(o.dataset.id!==CUR.id)switchTo(o.dataset.id);close('listsSheet');return}
@@ -599,7 +617,7 @@ $('lists').addEventListener('click',e=>{
 });
 $('newList').addEventListener('click',()=>{
  const name=$('newName').value.trim()||stampName(),now=Date.now();
- const l={id:lid(),name,items:[],created:now,updated:now};LISTS.push(l);
+ const l={id:lid(),name,items:[],created:now,updated:now};LISTS.unshift(l);
  switchTo(l.id,`Started ${name}. Your other lists are saved.`);close('listsSheet');
 });
 $('newName').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('newList').click()}});

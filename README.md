@@ -23,7 +23,7 @@ A phone web app that scans part Data Matrix codes with the live camera and keeps
 - The **keyboard** button lets you type in a serial that won't scan.
 - **Email list** on the main page is one tap: Mail opens with your default recipients, the subject and the list in the body.
 - **Email CSV** in the ⋯ menu attaches the CSV as well as putting the list in the body. iPhone can't fill in To when a file is attached, so your recipients are copied: tap To and choose Paste.
-- Tap the list name (or **Lists**) at the top to see your saved lists, open, rename or delete one, or start a new list. Every list saves itself as you scan.
+- Tap the list name (or **Lists**) at the top to see your saved lists, open, rename, delete or reorder them (Reorder, then drag ≡), or start a new list. Every list saves itself as you scan.
 - Tap **Reorder** above the list, then drag the ≡ handle to move parts. **Renumber** relabels them P1, P2… in the new order. Exports and emails follow the list order.
 - Tap any part to change its label or serial, or to delete it.
 - The **⋯** menu has the list name, Email CSV, Share CSV, Download CSV, Copy for Excel, Renumber, Saved lists, Settings and Clear.
@@ -33,6 +33,6 @@ Your lists are saved on the phone only. They never go to GitHub. Export them bef
 
 ## Updating it later
 
-Upload the changed files to the same repository. In `sw.js`, change the version number at the end of `part-scanner-v10` (to `v11`, `v12`, and so on) so phones pick up the new version.
+Upload the changed files to the same repository. In `sw.js`, change the version number at the end of `part-scanner-v11` (to `v12`, `v13`, and so on) so phones pick up the new version.
 
 Data Matrix decoding uses zxing-wasm / zxing-cpp (MIT and Apache-2.0 licences; see ZXING-LICENSE.txt).
