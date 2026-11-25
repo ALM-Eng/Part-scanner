@@ -21,7 +21,8 @@ A phone web app that scans part Data Matrix codes with the live camera and keeps
 - **Scan parts** opens the camera. Hold each code inside the window. New serials are added with the next label and a beep. Codes already in the list are ignored and shown in orange.
 - The **photo** button reads codes from a picture. Use it for tiny or awkward codes, since a full photo has more detail than the live feed.
 - The **keyboard** button lets you type in a serial that won't scan.
-- Tap the list name (or **Lists**) at the top to see your saved lists, open one, start a new list or delete one. Every list saves itself as you scan.
+- **Email list** on the main page opens Mail with the CSV attached and the list in the body (addresses are copied for you to paste into To), or without the attachment with recipients and subject filled in.
+- Tap the list name (or **Lists**) at the top to see your saved lists, open, rename or delete one, or start a new list. Every list saves itself as you scan.
 - Tap any part to change its label or serial, or to delete it.
 - The **⋯** menu has the list name, **Email list** (fills in your default recipients and subject, with the list in the email body), Share CSV, Download CSV, Copy for Excel, Renumber, Saved lists, Settings and Clear.
 - **Settings** holds your default email recipients, the label prefix and the beep.
@@ -30,6 +31,6 @@ Your lists are saved on the phone only. They never go to GitHub. Export them bef
 
 ## Updating it later
 
-Upload the changed files to the same repository. In `sw.js`, change the version number at the end of `part-scanner-v7` (to `v8`, `v9`, and so on) so phones pick up the new version.
+Upload the changed files to the same repository. In `sw.js`, change the version number at the end of `part-scanner-v8` (to `v9`, `v10`, and so on) so phones pick up the new version.
 
 Data Matrix decoding uses zxing-wasm / zxing-cpp (MIT and Apache-2.0 licences; see ZXING-LICENSE.txt).

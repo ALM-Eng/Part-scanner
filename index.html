@@ -17,11 +17,11 @@
    white cards, blue accent, green pass / amber repeat. Same light and dark palettes. */
 :root{color-scheme:light;
  --bg:#eef0f3;--surface:#ffffff;--surface-2:#f7f8fa;--ink:#111418;--ink-2:#4a5058;--muted:#7a818a;--line:#d3d7dd;
- --navy:#1f4e78;--navy-ink:#ffffff;--accent:#2a78d6;--pass:#2e9e5b;--fail:#d93025;--amb:#b25e00;--band-red:#b5473a;
+ --navy:#1f4e78;--navy-ink:#ffffff;--accent:#2a78d6;--pass:#2e9e5b;--fail:#d93025;--amb:#b25e00;--band-red:#b5473a;--navy-text:#1f4e78;
  --lab:#1f4e78;--lab-ink:#ffffff;--shadow:0 1px 2px rgba(0,0,0,.06)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
  --bg:#121314;--surface:#1a1a19;--surface-2:#222221;--ink:#f2f2f0;--ink-2:#c3c2b7;--muted:#8f8e86;--line:#383835;
- --navy:#1c4468;--accent:#3987e5;--pass:#4cc38a;--fail:#ff6b5e;--amb:#f2a541;--lab:#1c4468;--lab-ink:#ffffff}}
+ --navy:#1c4468;--accent:#3987e5;--pass:#4cc38a;--fail:#ff6b5e;--amb:#f2a541;--lab:#1c4468;--lab-ink:#ffffff;--navy-text:#7fb2f0}}
 *{box-sizing:border-box;min-width:0}
 html,body{margin:0}
 body{background:var(--bg);color:var(--ink);font:17px/1.45 "Segoe UI",-apple-system,BlinkMacSystemFont,Roboto,system-ui,sans-serif;overflow-x:clip;
@@ -96,6 +96,7 @@ button{cursor:pointer;-webkit-tap-highlight-color:transparent}
 /* sheets */
 .sheet{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:50}
 .sheet.on{display:flex}
+#renSheet,#confirmSheet{z-index:55}
 .panel{background:var(--surface);width:100%;max-width:560px;border-radius:14px 14px 0 0;border-top:4px solid var(--navy);padding:18px max(18px,env(safe-area-inset-left)) calc(20px + env(safe-area-inset-bottom));max-height:90vh;overflow:auto}
 .panel h2{margin:0 0 12px;font-size:21px;line-height:1.15}
 label.f{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:12px 0 6px;text-transform:uppercase;letter-spacing:.4px}
@@ -112,12 +113,17 @@ label.f{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:1
  display:none;align-items:center;gap:14px;z-index:60;max-width:calc(100% - 32px);box-shadow:0 8px 24px rgba(0,0,0,.25)}
 .toast.on{display:flex}.toast button{background:none;border:0;color:#6da7ec;font-weight:700;min-height:44px;padding:0 6px}
 .lists{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:8px}
-.lrow{display:grid;grid-template-columns:minmax(0,1fr) auto;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);overflow:hidden}
+.lrow{display:grid;grid-template-columns:minmax(0,1fr) auto auto;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);overflow:hidden}
 .lrow.cur{border-color:var(--navy);box-shadow:inset 4px 0 0 var(--navy)}
 .lopen{border:0;background:none;text-align:left;padding:10px 12px 10px 14px;min-height:56px}
 .lname{display:block;font-weight:700;overflow-wrap:anywhere}
 .lmeta{display:block;font-size:13px;color:var(--muted);margin-top:1px}
 .now{display:inline-block;margin-left:8px;font-size:12px;font-weight:700;color:#fff;background:var(--navy);border-radius:4px;padding:1px 6px;vertical-align:2px}
+.mailbtn{margin-top:12px;width:100%;min-height:52px;border-radius:10px;border:2px solid var(--navy-text);background:var(--surface);color:var(--navy-text);
+ font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:var(--shadow)}
+.mailbtn[hidden]{display:none}
+.mailbtn .n{font-weight:500;opacity:.8;font-size:16px}
+.lren{border:0;border-left:1px solid var(--line);background:none;width:52px;color:var(--ink-2);display:grid;place-items:center}
 .ldel{border:0;border-left:1px solid var(--line);background:none;width:52px;color:var(--fail);display:grid;place-items:center}
 .newrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
 .newrow .b{flex:none;min-width:96px}
@@ -139,6 +145,7 @@ M 5.82,11.72 L 13.25,6.62 L 13.40,6.40 L 14.05,5.97 L 14.42,5.89 L 23.01,11.72 L
 
 <main class="wrap">
  <p class="status" id="status" role="status">Loading the Data Matrix reader…</p>
+ <button class="mailbtn" id="mailMain" hidden><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>Email list <span class="n" id="mailN"></span></button>
  <div class="shot" id="shot">
   <canvas id="cv" width="10" height="10" aria-label="Last photo with decoded codes outlined"></canvas>
   <span class="cap" id="shotCap"></span>
@@ -197,6 +204,28 @@ M 5.82,11.72 L 13.25,6.62 L 13.40,6.40 L 14.05,5.97 L 14.42,5.89 L 23.01,11.72 L
  <p class="hint">Lists are saved on this phone only. Export before clearing a list or deleting the app.</p>
  <div class="btns"><button class="b p" data-close>Done</button></div>
 </div></div>
+
+<div class="sheet" id="mailSheet"><div class="panel">
+ <h2>Email list</h2>
+ <label class="f" for="mailTo">To</label>
+ <input class="in" id="mailTo" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="email" placeholder="Add addresses in Settings, or type here">
+ <label class="f" for="mailSubj">Subject</label>
+ <input class="in" id="mailSubj" autocomplete="off">
+ <div class="btns">
+  <button class="b p" id="mailCsv" hidden>Open Mail with CSV attached</button>
+  <button class="b" id="mailPlain">Open Mail without attachment</button>
+ </div>
+ <p class="hint" id="mailHint"></p>
+ <p class="hint" id="mailMsg" role="status"></p>
+ <div class="btns"><button class="b" data-close>Close</button></div>
+</div></div>
+
+<div class="sheet" id="renSheet"><form class="panel" id="renForm">
+ <h2>Rename list</h2>
+ <label class="f" for="renIn">List name</label>
+ <input class="in" id="renIn" maxlength="40" autocomplete="off">
+ <div class="btns"><button type="button" class="b" data-close>Cancel</button><button class="b p">Save</button></div>
+</form></div>
 
 <div class="sheet" id="setSheet"><div class="panel">
  <h2>Settings</h2>
@@ -405,7 +434,7 @@ function fmt(ts){const d=new Date(ts);return d.toLocaleDateString(undefined,{day
 function render(){
  const items=[...S.items].sort((a,b)=>b.ts-a.ts);updateCounts();
  $('listName').textContent=S.name||'Serial list';document.title=S.name||'ALM Scan';
- $('empty').hidden=items.length>0;
+ $('empty').hidden=items.length>0;$('mailMain').hidden=!items.length;$('mailN').textContent=`(${items.length} part${items.length===1?'':'s'})`;
  $('list').innerHTML=items.map(it=>`<li><button class="item${S.fresh.has(it.id)?' fresh':''}" data-id="${esc(it.id)}"><span class="tag">${esc(it.label||'—')}</span><span><div class="serial mono">${esc(it.serial)}</div><div class="meta">${esc(fmt(it.ts))}</div></span></button></li>`).join('');
  S.fresh.clear();$('nextHint').textContent='Next new part will be '+nextLabel()+'.';
 }
@@ -463,16 +492,41 @@ function emailsHint(){const{ok,bad}=parseEmails($('emailsIn').value),h=$('emails
  else{h.textContent=ok.length?`Email list will go to ${ok.length} address${ok.length===1?'':'es'}. You can still change them in Mail before sending.`:'Separate addresses with commas or new lines. Email list fills these in for you.';h.className='hint'}}
 function mailSubject(){const n=S.items.length,d=new Date().toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'});
  return `ALM Scan: ${S.name||'Serial list'} (${n} part${n===1?'':'s'}) ${d}`}
-function mailBody(){
+function mailBody(withCsv){
  const rows=[...S.items].sort((a,b)=>a.ts-b.ts).map(it=>{const d=new Date(it.ts),p=n=>String(n).padStart(2,'0');
   return [it.label,it.serial,`${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`].map(v=>String(v).replace(/[\t\r\n]/g,' ')).join('\t')});
- return `${S.name||'Serial list'}: ${S.items.length} part${S.items.length===1?'':'s'}\n\n`+['Label\tSerial\tScanned',...rows].join('\n')+'\n\nTo put this in Excel, copy the table above and paste it into cell A1.\nSent from ALM Scan'}
-$('emailList').addEventListener('click',()=>{
- if(!S.items.length){$('menuMsg').textContent='Nothing to email yet.';return}
- const to=parseEmails(ls.get(K.emails,'')).ok.join(',');
- const href='mailto:'+to+'?subject='+encodeURIComponent(mailSubject())+'&body='+encodeURIComponent(mailBody());
+ return `${S.name||'Serial list'}: ${S.items.length} part${S.items.length===1?'':'s'}\n\n`+['Label\tSerial\tScanned',...rows].join('\n')+
+  '\n\n'+(withCsv?'The same list is attached as a CSV file.\n':'To put this in Excel, copy the table above and paste it into cell A1.\n')+'Sent from ALM Scan'}
+let FILE_SHARE=false;
+if(navigator.canShare){try{FILE_SHARE=navigator.canShare({files:[new File(['x'],'t.csv',{type:'text/csv'})]})}catch{}}
+let copiedTo=null;
+function openMail(){
+ if(!S.items.length){setStatus('Nothing to email yet.','err');return}
+ close('menuSheet');
+ $('mailTo').value=parseEmails(ls.get(K.emails,'')).ok.join(', ');$('mailSubj').value=mailSubject();
+ $('mailCsv').hidden=!FILE_SHARE;$('mailMsg').textContent='';copiedTo=null;
+ $('mailHint').textContent=FILE_SHARE?'With the CSV attached, iPhone won’t let ALM Scan fill in the To box, so the addresses are copied for you: tap To in Mail and choose Paste. Without the attachment, everything is filled in and the list is in the email body.':'The list goes in the email body as a table that pastes straight into Excel.';
+ open('mailSheet');
+}
+$('mailMain').addEventListener('click',openMail);
+$('emailList').addEventListener('click',openMail);
+$('mailPlain').addEventListener('click',()=>{
+ const to=parseEmails($('mailTo').value).ok.join(',');
+ const href='mailto:'+to+'?subject='+encodeURIComponent($('mailSubj').value.trim()||mailSubject())+'&body='+encodeURIComponent(mailBody(false));
  const a=document.createElement('a');a.href=href;a.rel='noopener';document.body.appendChild(a);a.click();a.remove();
- $('menuMsg').textContent=to?'Opening Mail with your default recipients.':'Opening Mail. Add default recipients in Settings to fill them in automatically.';
+ $('mailMsg').textContent='Opening Mail…';
+});
+$('mailCsv').addEventListener('click',async()=>{
+ const to=parseEmails($('mailTo').value).ok.join(', ');
+ if(to&&copiedTo!==to){try{await navigator.clipboard.writeText(to);copiedTo=to}catch{}}
+ try{
+  await navigator.share({files:[csvFile()],title:$('mailSubj').value.trim()||mailSubject(),text:mailBody(true)});
+  $('mailMsg').textContent=copiedTo?'Done. If the To box was empty, tap it and choose Paste.':'Done.';
+ }catch(e){
+  if(e&&e.name==='AbortError'){$('mailMsg').textContent='Cancelled.';return}
+  if(e&&e.name==='NotAllowedError'){$('mailMsg').textContent=(copiedTo?'Addresses copied. ':'')+'Tap Open Mail with CSV attached again to choose Mail.';return}
+  $('mailMsg').textContent='Couldn’t attach the file here. Use Open Mail without attachment instead.';
+ }
 });
 $('openSettings').addEventListener('click',()=>{close('menuSheet');$('emailsIn').value=ls.get(K.emails,'');$('prefix').value=S.prefix;$('beepIn').checked=S.beep;emailsHint();render();open('setSheet')});
 $('emailsIn').addEventListener('input',e=>{ls.set(K.emails,e.target.value);emailsHint()});
@@ -484,6 +538,7 @@ function renderLists(){
  const ls2=[...LISTS].sort((a,b)=>(b.id===CUR.id)-(a.id===CUR.id)||b.updated-a.updated);
  $('lists').innerHTML=ls2.map(l=>{const n=l.items.length;
   return `<li class="lrow${l.id===CUR.id?' cur':''}"><button class="lopen" data-id="${esc(l.id)}"><span class="lname">${esc(listName(l))}${l.id===CUR.id?'<span class="now">Open</span>':''}</span><span class="lmeta">${n} part${n===1?'':'s'} · ${esc(fmt(l.updated))}</span></button>`+
+  `<button class="lren" data-ren="${esc(l.id)}" aria-label="Rename ${esc(listName(l))}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg></button>`+
   `<button class="ldel" data-del="${esc(l.id)}" aria-label="Delete ${esc(listName(l))}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg></button></li>`}).join('');
 }
 function switchTo(id,msg){
@@ -492,11 +547,17 @@ function switchTo(id,msg){
  undoItem=null;$('toast').classList.remove('on');$('shot').classList.remove('on');
  setStatus(msg||`Opened ${listName(l)}.`,'good');render();renderLists();
 }
+let renaming=null;
+$('renForm').addEventListener('submit',e=>{e.preventDefault();const l=LISTS.find(x=>x.id===renaming);if(!l){close('renSheet');return}
+ const v=$('renIn').value.trim();l.name=v;if(l.id===CUR.id)S.name=v;
+ const keep=l.updated;save();if(l.id!==CUR.id)l.updated=keep;ls.set(K.lists,LISTS);
+ render();renderLists();close('renSheet');toast(`Renamed to ${listName(l)}`)});
 function openLists(){close('menuSheet');$('newName').value='';renderLists();open('listsSheet')}
 $('listsBtn').addEventListener('click',openLists);
 $('openLists').addEventListener('click',openLists);
 $('lists').addEventListener('click',e=>{
- const o=e.target.closest('.lopen'),d=e.target.closest('.ldel');
+ const o=e.target.closest('.lopen'),d=e.target.closest('.ldel'),r=e.target.closest('.lren');
+ if(r){renaming=r.dataset.ren;const l=LISTS.find(x=>x.id===renaming);if(!l)return;$('renIn').value=l.name;open('renSheet');setTimeout(()=>{$('renIn').focus();$('renIn').select()},60);return}
  if(o){if(o.dataset.id!==CUR.id)switchTo(o.dataset.id);close('listsSheet');return}
  if(d){const l=LISTS.find(x=>x.id===d.dataset.del);if(!l)return;
   confirmBox(`Delete ${listName(l)}?`,`This removes the list and its ${l.items.length} part${l.items.length===1?'':'s'} from this phone. Export it first if you need it.`,()=>{
