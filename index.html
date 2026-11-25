@@ -205,7 +205,7 @@ M 5.82,11.72 L 13.25,6.62 L 13.40,6.40 L 14.05,5.97 L 14.42,5.89 L 23.01,11.72 L
  <label class="f" for="nameIn">List name</label>
  <input class="in" id="nameIn" maxlength="40" autocomplete="off" placeholder="Serial list">
  <div class="btns">
-  <button class="b p" id="emailList">Email list</button>
+  <button class="b p" id="emailCsv" hidden>Email CSV</button>
   <button class="b p" id="shareCsv" hidden>Share CSV</button>
   <button class="b" id="dlCsv">Download CSV</button>
   <button class="b" id="copyCsv">Copy for Excel</button>
@@ -217,21 +217,6 @@ M 5.82,11.72 L 13.25,6.62 L 13.40,6.40 L 14.05,5.97 L 14.42,5.89 L 23.01,11.72 L
  <p class="hint" id="menuMsg" role="status"></p>
  <p class="hint">Lists are saved on this phone only. Export before clearing a list or deleting the app.</p>
  <div class="btns"><button class="b p" data-close>Done</button></div>
-</div></div>
-
-<div class="sheet" id="mailSheet"><div class="panel">
- <h2>Email list</h2>
- <label class="f" for="mailTo">To</label>
- <input class="in" id="mailTo" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="email" placeholder="Add addresses in Settings, or type here">
- <label class="f" for="mailSubj">Subject</label>
- <input class="in" id="mailSubj" autocomplete="off">
- <div class="btns">
-  <button class="b p" id="mailCsv" hidden>Open Mail with CSV attached</button>
-  <button class="b" id="mailPlain">Open Mail without attachment</button>
- </div>
- <p class="hint" id="mailHint"></p>
- <p class="hint" id="mailMsg" role="status"></p>
- <div class="btns"><button class="b" data-close>Close</button></div>
 </div></div>
 
 <div class="sheet" id="renSheet"><form class="panel" id="renForm">
@@ -511,7 +496,7 @@ const EMAIL_RE=/^[^\s@,;<>"'()]+@[^\s@,;<>"'()]+\.[^\s@,;<>"'()]+$/;
 function parseEmails(t){const parts=String(t||'').split(/[\s,;]+/).filter(Boolean);return{ok:[...new Set(parts.filter(x=>EMAIL_RE.test(x)))],bad:parts.filter(x=>!EMAIL_RE.test(x))}}
 function emailsHint(){const{ok,bad}=parseEmails($('emailsIn').value),h=$('emailsHint');
  if(bad.length){h.textContent='Not a valid address: '+bad.join(', ');h.className='hint warn'}
- else{h.textContent=ok.length?`Email list will go to ${ok.length} address${ok.length===1?'':'es'}. You can still change them in Mail before sending.`:'Separate addresses with commas or new lines. Email list fills these in for you.';h.className='hint'}}
+ else{h.textContent=ok.length?`Email list fills in ${ok.length} address${ok.length===1?'':'es'}. Email CSV copies them for you to paste into To.`:'Separate addresses with commas or new lines. Email list fills these in for you.';h.className='hint'}}
 function mailSubject(){const n=S.items.length,d=new Date().toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'});
  return `ALM Scan: ${S.name||'Serial list'} (${n} part${n===1?'':'s'}) ${d}`}
 function mailBody(withCsv){
@@ -522,32 +507,27 @@ function mailBody(withCsv){
 let FILE_SHARE=false;
 if(navigator.canShare){try{FILE_SHARE=navigator.canShare({files:[new File(['x'],'t.csv',{type:'text/csv'})]})}catch{}}
 let copiedTo=null;
-function openMail(){
- if(!S.items.length){setStatus('Nothing to email yet.','err');return}
- close('menuSheet');
- $('mailTo').value=parseEmails(ls.get(K.emails,'')).ok.join(', ');$('mailSubj').value=mailSubject();
- $('mailCsv').hidden=!FILE_SHARE;$('mailMsg').textContent='';copiedTo=null;
- $('mailHint').textContent=FILE_SHARE?'With the CSV attached, iPhone won’t let ALM Scan fill in the To box, so the addresses are copied for you: tap To in Mail and choose Paste. Without the attachment, everything is filled in and the list is in the email body.':'The list goes in the email body as a table that pastes straight into Excel.';
- open('mailSheet');
-}
-$('mailMain').addEventListener('click',openMail);
-$('emailList').addEventListener('click',openMail);
-$('mailPlain').addEventListener('click',()=>{
- const to=parseEmails($('mailTo').value).ok.join(',');
- const href='mailto:'+to+'?subject='+encodeURIComponent($('mailSubj').value.trim()||mailSubject())+'&body='+encodeURIComponent(mailBody(false));
+if(FILE_SHARE)$('emailCsv').hidden=false;
+const defaultTo=()=>parseEmails(ls.get(K.emails,'')).ok;
+// main page: one tap, list in the email body, recipients + subject filled in
+$('mailMain').addEventListener('click',()=>{
+ if(!S.items.length)return;
+ const href='mailto:'+defaultTo().join(',')+'?subject='+encodeURIComponent(mailSubject())+'&body='+encodeURIComponent(mailBody(false));
  const a=document.createElement('a');a.href=href;a.rel='noopener';document.body.appendChild(a);a.click();a.remove();
- $('mailMsg').textContent='Opening Mail…';
+ setStatus(defaultTo().length?'Opening Mail with your default recipients.':'Opening Mail. Add default recipients in Settings to fill them in automatically.','good');
 });
-$('mailCsv').addEventListener('click',async()=>{
- const to=parseEmails($('mailTo').value).ok.join(', ');
+// menu: CSV attached via the share sheet (iPhone can't prefill To here, so the addresses are copied)
+$('emailCsv').addEventListener('click',async()=>{
+ if(!S.items.length){$('menuMsg').textContent='Nothing to email yet.';return}
+ const to=defaultTo().join(', ');
  if(to&&copiedTo!==to){try{await navigator.clipboard.writeText(to);copiedTo=to}catch{}}
  try{
-  await navigator.share({files:[csvFile()],title:$('mailSubj').value.trim()||mailSubject(),text:mailBody(true)});
-  $('mailMsg').textContent=copiedTo?'Done. If the To box was empty, tap it and choose Paste.':'Done.';
+  await navigator.share({files:[csvFile()],title:mailSubject(),text:mailBody(true)});
+  $('menuMsg').textContent=copiedTo?'In Mail, tap To and choose Paste to add your default recipients.':'Done.';
  }catch(e){
-  if(e&&e.name==='AbortError'){$('mailMsg').textContent='Cancelled.';return}
-  if(e&&e.name==='NotAllowedError'){$('mailMsg').textContent=(copiedTo?'Addresses copied. ':'')+'Tap Open Mail with CSV attached again to choose Mail.';return}
-  $('mailMsg').textContent='Couldn’t attach the file here. Use Open Mail without attachment instead.';
+  if(e&&e.name==='AbortError'){$('menuMsg').textContent='Cancelled.';return}
+  if(e&&e.name==='NotAllowedError'){$('menuMsg').textContent=(copiedTo?'Recipients copied. ':'')+'Tap Email CSV again to open the share sheet.';return}
+  $('menuMsg').textContent='Couldn’t attach the file here. Use Email list on the main page instead.';
  }
 });
 $('openSettings').addEventListener('click',()=>{close('menuSheet');$('newestIn').checked=S.newestTop;$('emailsIn').value=ls.get(K.emails,'');$('prefix').value=S.prefix;$('beepIn').checked=S.beep;emailsHint();render();open('setSheet')});
