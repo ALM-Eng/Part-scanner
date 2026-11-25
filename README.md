@@ -28,6 +28,6 @@ Your scans are saved on the phone only. They never go to GitHub. Export them bef
 
 ## Updating it later
 
-Upload the changed files to the same repository. In `sw.js`, change the version number at the end of `part-scanner-v4` (to `v5`, `v6`, and so on) so phones pick up the new version.
+Upload the changed files to the same repository. In `sw.js`, change the version number at the end of `part-scanner-v5` (to `v6`, `v7`, and so on) so phones pick up the new version.
 
 Data Matrix decoding uses zxing-wasm / zxing-cpp (MIT and Apache-2.0 licences; see ZXING-LICENSE.txt).

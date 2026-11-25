@@ -398,7 +398,7 @@ $('beepIn').addEventListener('change',e=>{S.beep=e.target.checked;ls.set(K.beep,
 function csv(sep){const rows=[...S.items].sort((a,b)=>a.ts-b.ts).map(it=>{const d=new Date(it.ts),p=n=>String(n).padStart(2,'0');
   return[it.label,it.serial,`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`]});
  const cell=v=>{v=String(v);if(sep==='\t')return v.replace(/[\t\n]/g,' ');if(/^[=+\-@]/.test(v))v="'"+v;return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
- return [['Label','Serial','Scanned'],...rows].map(r=>r.map(cell).join(sep)).join('\r\n')}
+ return [['Label','Serial','Scanned'],...rows].map(r=>r.map(cell).join(sep)).join('\n')}
 function fileName(){const d=new Date(),p=n=>String(n).padStart(2,'0');const base=(S.name||'ALM-Scan').replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'-')||'ALM-Scan';
  return `${base}-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.csv`}
 const csvFile=()=>new File(['﻿'+csv(',')],fileName(),{type:'text/csv'});
