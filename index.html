@@ -36,8 +36,9 @@ button{cursor:pointer;-webkit-tap-highlight-color:transparent}
 .top .row{display:flex;align-items:center;gap:12px;max-width:720px;margin:0 auto}
 .logotile{flex:none;background:#fff;border-radius:10px;padding:5px 9px;box-shadow:0 2px 8px rgba(0,0,0,.25);display:flex}
 .logo{height:38px;width:auto;display:block}
-.ttl{flex:1;border-left:2px solid rgba(255,255,255,.35);padding-left:12px}
-h1{font-size:19px;line-height:1.15;margin:0;font-weight:700;letter-spacing:.2px;overflow-wrap:anywhere}
+.ttl{flex:1;border:0;border-left:2px solid rgba(255,255,255,.35);padding:2px 0 2px 12px;background:none;color:inherit;text-align:left;min-height:44px}
+.sw{display:inline-flex;align-items:center;gap:3px;font-weight:600;text-decoration:underline;text-underline-offset:3px;text-decoration-color:rgba(255,255,255,.5)}
+.h1{display:block;font-size:19px;line-height:1.15;margin:0;font-weight:700;letter-spacing:.2px;overflow-wrap:anywhere}
 .count{font-size:14px;opacity:.9;margin-top:2px}
 .iconbtn{flex:none;width:44px;height:44px;border-radius:8px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.1);color:#fff;display:grid;place-items:center}
 .wrap{max-width:720px;margin:0 auto;padding:0 max(14px,env(safe-area-inset-left))}
@@ -110,7 +111,17 @@ label.f{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:1
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom));background:#111418;color:#fff;border-radius:8px;padding:10px 12px 10px 16px;
  display:none;align-items:center;gap:14px;z-index:60;max-width:calc(100% - 32px);box-shadow:0 8px 24px rgba(0,0,0,.25)}
 .toast.on{display:flex}.toast button{background:none;border:0;color:#6da7ec;font-weight:700;min-height:44px;padding:0 6px}
-@media (max-width:370px){.logo{height:32px}.ttl{padding-left:10px}h1{font-size:17px}}
+.lists{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:8px}
+.lrow{display:grid;grid-template-columns:minmax(0,1fr) auto;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);overflow:hidden}
+.lrow.cur{border-color:var(--navy);box-shadow:inset 4px 0 0 var(--navy)}
+.lopen{border:0;background:none;text-align:left;padding:10px 12px 10px 14px;min-height:56px}
+.lname{display:block;font-weight:700;overflow-wrap:anywhere}
+.lmeta{display:block;font-size:13px;color:var(--muted);margin-top:1px}
+.now{display:inline-block;margin-left:8px;font-size:12px;font-weight:700;color:#fff;background:var(--navy);border-radius:4px;padding:1px 6px;vertical-align:2px}
+.ldel{border:0;border-left:1px solid var(--line);background:none;width:52px;color:var(--fail);display:grid;place-items:center}
+.newrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.newrow .b{flex:none;min-width:96px}
+@media (max-width:370px){.logo{height:32px}.ttl{padding-left:10px}.h1{font-size:17px}}
 @media (prefers-reduced-motion:reduce){.item.fresh{animation:none}.win{transition:none}}
 </style>
 </head>
@@ -120,7 +131,7 @@ label.f{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:1
 M 14.34,13.18 L 17.77,15.51 L 14.42,17.70 L 14.20,17.70 L 11.07,15.51 Z
 M 8.44,13.62 L 14.27,9.46 L 20.54,13.69 L 19.37,14.49 L 19.01,14.49 L 14.49,11.36 L 14.05,11.43 L 9.68,14.56 L 8.66,13.91 Z
 M 5.82,11.72 L 13.25,6.62 L 13.40,6.40 L 14.05,5.97 L 14.42,5.89 L 23.01,11.72 L 23.16,12.01 L 21.92,12.74 L 14.42,7.64 L 13.91,7.72 L 6.99,12.67 L 6.04,12.09 Z" fill="#111111" fill-rule="evenodd"/><path d="M 4.07,18.50 L 4.07,20.17 L 4.22,20.39 L 12.30,25.93 L 16.24,26.00 L 19.66,23.81 L 19.66,22.14 L 19.37,22.07 L 14.27,25.34 L 11.65,23.60 L 10.63,22.72 L 10.56,22.79 L 5.17,19.15 L 5.02,18.93 L 4.22,18.42 Z" fill="#2d6a2d"/><path d="M 4.07,14.71 L 4.07,16.46 L 14.05,23.38 L 14.49,23.38 L 22.94,17.70 L 23.01,16.17 L 22.72,15.95 L 15.00,21.19 L 14.20,21.56 L 4.36,14.71 Z" fill="#2d6a2d"/></g><line x1="242.9" y1="532.5" x2="781.1" y2="532.5" stroke="#b5473a" stroke-width="22.5" stroke-linecap="round" opacity="0.18"/><line x1="242.9" y1="532.5" x2="781.1" y2="532.5" stroke="#b5473a" stroke-width="9.2" stroke-linecap="round"/><line x1="512.0" y1="56.32" x2="512.0" y2="117.76" stroke="#b5473a" stroke-width="43.0" stroke-linecap="round"/><line x1="512.0" y1="906.24" x2="512.0" y2="967.68" stroke="#b5473a" stroke-width="43.0" stroke-linecap="round"/></g><path d="M216.296875 122.0H232.09375L237.296875 105.78125H262.09375L267.484375 122.0H283.375L258.90625 52.15625H240.15625ZM240.859375 94.578125 242.875 88.296875C244.984375 81.265625 247.046875 72.96875 249.390625 63.359375C251.828125 72.875 254.03125 81.125 256.28125 88.296875L258.390625 94.578125ZM292.0 122.0H336.4375V110.140625H306.296875V52.15625H292.0ZM346.28125 122.0H360.484375V89.046875C360.484375 83.796875 360.109375 73.53125 359.96875 65.046875C362.453125 74.421875 365.265625 84.21875 366.90625 89.046875L378.671875 122.0H390.71875L402.296875 89.046875C403.9375 84.078125 406.890625 73.90625 409.234375 64.484375C409.09375 73.296875 408.71875 83.796875 408.71875 89.046875V122.0H423.109375V52.15625H401.078125L389.921875 84.21875C388.515625 88.671875 386.359375 98.0 384.765625 105.546875C383.125 97.953125 380.96875 88.625 379.5625 84.21875L368.21875 52.15625H346.28125Z" fill="#26303d"/><path d="M482.9375 123.078125C499.625 123.078125 509.375 114.6875 509.375 102.40625C509.375 90.21875 499.203125 84.828125 488.84375 82.34375L482.328125 80.65625C476.65625 79.25 470.421875 76.90625 470.421875 71.046875C470.421875 65.75 475.203125 61.859375 483.078125 61.859375C490.625 61.859375 495.6875 65.328125 496.296875 71.28125H508.4375C508.109375 59.609375 498.171875 51.21875 483.265625 51.21875C468.640625 51.21875 457.765625 59.46875 457.765625 71.796875C457.765625 81.640625 464.65625 87.546875 476.328125 90.546875L484.25 92.609375C491.796875 94.578125 496.859375 96.875 496.859375 102.3125C496.859375 108.3125 491.09375 112.390625 482.84375 112.390625C474.96875 112.390625 468.734375 108.828125 468.171875 101.46875H455.84375C456.40625 115.25 466.671875 123.078125 482.9375 123.078125ZM552.545 122.9375C569.045 122.9375 580.1075 112.109375 582.029375 98.75H569.373125C567.779375 107.0 561.029375 111.734375 552.685625 111.734375C541.341875 111.734375 533.13875 103.15625 533.13875 87.125C533.13875 71.28125 541.295 62.421875 552.7325 62.421875C561.07625 62.421875 567.82625 67.15625 569.373125 75.40625H581.9825C579.779375 60.125 567.873125 51.21875 552.545 51.21875C534.310625 51.21875 520.57625 64.53125 520.57625 87.125C520.57625 109.625 534.17 122.9375 552.545 122.9375ZM590.74625 122.0H604.43375L610.1525 104.703125H636.261875L642.215 122.0H655.949375L631.011875 52.15625H615.12125ZM613.480625 94.625 616.43375 85.71875C618.355625 79.484375 620.465 71.65625 622.949375 61.90625C625.5275 71.5625 627.730625 79.296875 629.793125 85.71875L632.84 94.625ZM667.1975 122.0H679.9475V87.3125C679.9475 83.421875 679.525625 76.0625 679.056875 67.4375C683.744375 76.53125 686.369375 81.5 690.025625 87.359375L711.8225 122.0H726.025625V52.15625H713.3225V88.8125C713.3225 93.078125 713.60375 100.15625 714.0725 106.90625C711.025625 99.921875 707.97875 94.625 705.494375 90.640625L681.35375 52.15625H667.1975Z" fill="#b5473a"/><line x1="214" y1="140" x2="733.1" y2="140" stroke="#26303d" stroke-width="4"/><line x1="216.0" y1="140" x2="216.0" y2="158" stroke="#26303d" stroke-width="4"/><line x1="258.9" y1="140" x2="258.9" y2="151" stroke="#26303d" stroke-width="4"/><line x1="301.8" y1="140" x2="301.8" y2="158" stroke="#26303d" stroke-width="4"/><line x1="344.8" y1="140" x2="344.8" y2="151" stroke="#26303d" stroke-width="4"/><line x1="387.7" y1="140" x2="387.7" y2="158" stroke="#26303d" stroke-width="4"/><line x1="430.6" y1="140" x2="430.6" y2="151" stroke="#26303d" stroke-width="4"/><line x1="473.5" y1="140" x2="473.5" y2="158" stroke="#26303d" stroke-width="4"/><line x1="516.4" y1="140" x2="516.4" y2="151" stroke="#26303d" stroke-width="4"/><line x1="559.4" y1="140" x2="559.4" y2="158" stroke="#26303d" stroke-width="4"/><line x1="602.3" y1="140" x2="602.3" y2="151" stroke="#26303d" stroke-width="4"/><line x1="645.2" y1="140" x2="645.2" y2="158" stroke="#26303d" stroke-width="4"/><line x1="688.1" y1="140" x2="688.1" y2="151" stroke="#26303d" stroke-width="4"/><line x1="731.1" y1="140" x2="731.1" y2="158" stroke="#26303d" stroke-width="4"/></svg></div>
- <div class="ttl"><h1 id="listName">Serial list</h1><div class="count" id="count">0 parts</div></div>
+ <button class="ttl" id="listsBtn" aria-label="Saved lists"><span class="h1" id="listName">Serial list</span><span class="count"><span id="count">0 parts</span> · <span class="sw">Lists<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg></span></span></button>
  <button class="iconbtn" id="menuBtn" aria-label="List options"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
 </div></header>
 
@@ -175,6 +186,7 @@ M 5.82,11.72 L 13.25,6.62 L 13.40,6.40 L 14.05,5.97 L 14.42,5.89 L 23.01,11.72 L
  <p class="hint" id="nextHint"></p>
  <label class="toggle">Beep on each new part<input type="checkbox" id="beepIn"></label>
  <div class="btns">
+  <button class="b" id="openLists">Saved lists</button>
   <button class="b p" id="shareCsv" hidden>Share CSV</button>
   <button class="b" id="dlCsv">Download CSV</button>
   <button class="b" id="copyCsv">Copy for Excel</button>
@@ -182,8 +194,18 @@ M 5.82,11.72 L 13.25,6.62 L 13.40,6.40 L 14.05,5.97 L 14.42,5.89 L 23.01,11.72 L
   <button class="b d" id="clearAll">Clear list</button>
  </div>
  <p class="hint" id="menuMsg" role="status"></p>
- <p class="hint">Saved on this phone only. Export before clearing or deleting the app.</p>
+ <p class="hint">Lists are saved on this phone only. Export before clearing a list or deleting the app.</p>
  <div class="btns"><button class="b p" data-close>Done</button></div>
+</div></div>
+
+<div class="sheet" id="listsSheet"><div class="panel">
+ <h2>Saved lists</h2>
+ <p class="hint">Every list saves itself as you scan. Tap a list to open it.</p>
+ <ul class="lists" id="lists"></ul>
+ <label class="f" for="newName">Start a new list</label>
+ <div class="newrow"><input class="in" id="newName" maxlength="40" autocomplete="off" placeholder="Name, e.g. Order 4471"><button class="b p" id="newList">Start</button></div>
+ <p class="hint">The list you have open now stays saved.</p>
+ <div class="btns"><button class="b" data-close>Close</button></div>
 </div></div>
 
 <div class="sheet" id="confirmSheet"><div class="panel">
@@ -198,8 +220,13 @@ M 5.82,11.72 L 13.25,6.62 L 13.40,6.40 L 14.05,5.97 L 14.42,5.89 L 23.01,11.72 L
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ls={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch{return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch{return false}}};
-const K={items:'dmscan.items',prefix:'dmscan.prefix',name:'dmscan.name',beep:'dmscan.beep'};
-const S={items:ls.get(K.items,[]),prefix:ls.get(K.prefix,'P'),name:ls.get(K.name,''),beep:ls.get(K.beep,true),fresh:new Set()};
+const K={items:'dmscan.items',prefix:'dmscan.prefix',name:'dmscan.name',beep:'dmscan.beep',lists:'dmscan.lists',cur:'dmscan.current'};
+const lid=()=>'L'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+let LISTS=ls.get(K.lists,null);
+if(!Array.isArray(LISTS)||!LISTS.length){const now=Date.now();LISTS=[{id:lid(),name:ls.get(K.name,''),items:ls.get(K.items,[]),created:now,updated:now}]}
+LISTS=LISTS.filter(l=>l&&typeof l==='object').map(l=>({id:String(l.id||lid()),name:String(l.name||''),items:Array.isArray(l.items)?l.items:[],created:+l.created||Date.now(),updated:+l.updated||Date.now()}));
+let CUR=LISTS.find(l=>l.id===ls.get(K.cur,''))||LISTS[0];
+const S={items:CUR.items,prefix:ls.get(K.prefix,'P'),name:CUR.name,beep:ls.get(K.beep,true),fresh:new Set()};
 if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
 
 /* ---------- decoder (Web Worker) ---------- */
@@ -357,7 +384,7 @@ function nextLabel(){const re=new RegExp('^'+S.prefix.replace(/[.*+?^${}()|[\]\\
  for(const it of S.items){const m=re.exec(it.label);if(m)n=Math.max(n,+m[1])}return S.prefix+(n+1)}
 let lastTs=0;const stamp=()=>(lastTs=Math.max(Date.now(),lastTs+1));
 const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
-function save(){if(!ls.set(K.items,S.items))setStatus('Couldn’t save on this phone. Export the list now.','err')}
+function save(){CUR.items=S.items;CUR.name=S.name;CUR.updated=Date.now();if(!ls.set(K.lists,LISTS))setStatus('Couldn’t save on this phone. Export the list now.','err');ls.set(K.cur,CUR.id)}
 function put(it){const i=S.items.findIndex(x=>x.id===it.id);if(i<0)S.items.push(it);else S.items[i]=it;save();if(!$('live').classList.contains('on'))render()}
 function del(id){S.items=S.items.filter(x=>x.id!==id);save();render()}
 
@@ -393,7 +420,7 @@ $('toastUndo').addEventListener('click',()=>{if(undoItem){put(undoItem);undoItem
 
 $('menuBtn').addEventListener('click',()=>{$('prefix').value=S.prefix;$('nameIn').value=S.name;$('beepIn').checked=S.beep;$('menuMsg').textContent='';render();open('menuSheet')});
 $('prefix').addEventListener('input',e=>{S.prefix=e.target.value.trim()||'P';ls.set(K.prefix,S.prefix);$('nextHint').textContent='Next new part will be '+nextLabel()+'.'});
-$('nameIn').addEventListener('input',e=>{S.name=e.target.value.trim();ls.set(K.name,S.name);$('listName').textContent=S.name||'Serial list'});
+$('nameIn').addEventListener('input',e=>{S.name=e.target.value.trim();save();$('listName').textContent=S.name||'Serial list'});
 $('beepIn').addEventListener('change',e=>{S.beep=e.target.checked;ls.set(K.beep,S.beep)});
 function csv(sep){const rows=[...S.items].sort((a,b)=>a.ts-b.ts).map(it=>{const d=new Date(it.ts),p=n=>String(n).padStart(2,'0');
   return[it.label,it.serial,`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`]});
@@ -415,6 +442,41 @@ $('renum').addEventListener('click',()=>{if(!S.items.length)return;close('menuSh
   [...S.items].sort((a,b)=>a.ts-b.ts).forEach((it,i)=>{it.label=S.prefix+(i+1)});save();render();toast('Renumbered')})});
 $('clearAll').addEventListener('click',()=>{if(!S.items.length)return;close('menuSheet');
  confirmBox('Clear the whole list?',`This removes all ${S.items.length} parts from this phone. Export them first if you need them.`,()=>{S.items=[];save();render();toast('List cleared');$('shot').classList.remove('on')})});
+
+/* ---------- saved lists ---------- */
+const listName=l=>l.name||'Serial list';
+function stampName(){const d=new Date();return 'List '+d.toLocaleDateString(undefined,{day:'numeric',month:'short'})+' '+d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})}
+function renderLists(){
+ const ls2=[...LISTS].sort((a,b)=>(b.id===CUR.id)-(a.id===CUR.id)||b.updated-a.updated);
+ $('lists').innerHTML=ls2.map(l=>{const n=l.items.length;
+  return `<li class="lrow${l.id===CUR.id?' cur':''}"><button class="lopen" data-id="${esc(l.id)}"><span class="lname">${esc(listName(l))}${l.id===CUR.id?'<span class="now">Open</span>':''}</span><span class="lmeta">${n} part${n===1?'':'s'} · ${esc(fmt(l.updated))}</span></button>`+
+  `<button class="ldel" data-del="${esc(l.id)}" aria-label="Delete ${esc(listName(l))}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg></button></li>`}).join('');
+}
+function switchTo(id,msg){
+ save();const l=LISTS.find(x=>x.id===id);if(!l)return;
+ CUR=l;S.items=l.items;S.name=l.name;ls.set(K.cur,l.id);
+ undoItem=null;$('toast').classList.remove('on');$('shot').classList.remove('on');
+ setStatus(msg||`Opened ${listName(l)}.`,'good');render();renderLists();
+}
+function openLists(){close('menuSheet');$('newName').value='';renderLists();open('listsSheet')}
+$('listsBtn').addEventListener('click',openLists);
+$('openLists').addEventListener('click',openLists);
+$('lists').addEventListener('click',e=>{
+ const o=e.target.closest('.lopen'),d=e.target.closest('.ldel');
+ if(o){if(o.dataset.id!==CUR.id)switchTo(o.dataset.id);close('listsSheet');return}
+ if(d){const l=LISTS.find(x=>x.id===d.dataset.del);if(!l)return;
+  confirmBox(`Delete ${listName(l)}?`,`This removes the list and its ${l.items.length} part${l.items.length===1?'':'s'} from this phone. Export it first if you need it.`,()=>{
+   const wasCur=l.id===CUR.id;LISTS=LISTS.filter(x=>x.id!==l.id);
+   if(!LISTS.length){const now=Date.now();LISTS.push({id:lid(),name:'',items:[],created:now,updated:now})}
+   if(wasCur){const next=[...LISTS].sort((a,b)=>b.updated-a.updated)[0];CUR=next;S.items=next.items;S.name=next.name;undoItem=null;$('shot').classList.remove('on')}
+   save();render();renderLists();toast(`Deleted ${listName(l)}`)})}
+});
+$('newList').addEventListener('click',()=>{
+ const name=$('newName').value.trim()||stampName(),now=Date.now();
+ const l={id:lid(),name,items:[],created:now,updated:now};LISTS.push(l);
+ switchTo(l.id,`Started ${name}. Your other lists are saved.`);close('listsSheet');
+});
+$('newName').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('newList').click()}});
 
 if('serviceWorker' in navigator&&window.isSecureContext)navigator.serviceWorker.register('sw.js').catch(()=>{});
 render();startWorker();
