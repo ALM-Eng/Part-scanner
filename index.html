@@ -51,7 +51,20 @@ button{cursor:pointer;-webkit-tap-highlight-color:transparent}
 .shot .x{position:absolute;right:8px;top:8px;background:rgba(0,0,0,.55);border:0}
 .busy{display:none;position:absolute;inset:0;background:rgba(0,0,0,.45);color:#fff;place-items:center;font-weight:600}
 .shot.working .busy{display:grid}
-.list{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:8px}
+.list{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:8px}
+.list li{display:grid;grid-template-columns:minmax(0,1fr);position:relative}
+.list.reorder li{grid-template-columns:minmax(0,1fr) auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)}
+.list.reorder .item{border:0;box-shadow:none;background:none;cursor:default}
+.list.reorder .item::after{display:none}
+.handle{width:58px;display:grid;place-items:center;color:var(--ink-2);border-left:1px solid var(--line);touch-action:none;cursor:grab;-webkit-user-select:none;user-select:none}
+.handle:focus-visible{outline:2px solid var(--accent);outline-offset:-4px}
+.list li.dragging{z-index:5;box-shadow:0 10px 28px rgba(0,0,0,.25);border-color:var(--accent);transition:none}
+.list li.dragging .handle{cursor:grabbing;color:var(--accent)}
+.tools{display:flex;align-items:center;gap:10px;margin-top:14px;min-height:44px}
+.tools[hidden]{display:none}
+.tools .tl{flex:1;font-size:14px;color:var(--ink-2)}
+.tbtn{min-height:40px;padding:0 14px;border-radius:6px;border:1px solid var(--line);background:var(--surface);font-weight:600;font-size:15px;display:inline-flex;align-items:center;gap:6px}
+.tbtn.p{background:var(--navy);border-color:var(--navy);color:#fff}
 .item{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;
  box-shadow:var(--shadow);padding:10px 12px;width:100%;text-align:left}
 .item::after{content:"";width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(-45deg);margin-right:4px}
@@ -152,6 +165,7 @@ M 5.82,11.72 L 13.25,6.62 L 13.40,6.40 L 14.05,5.97 L 14.42,5.89 L 23.01,11.72 L
   <button class="iconbtn x" id="shotClose" aria-label="Hide photo"><svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
   <div class="busy">Reading codes…</div>
  </div>
+ <div class="tools" id="tools" hidden><span class="tl" id="toolsTxt"></span><button class="tbtn" id="renumMatch" hidden>Renumber</button><button class="tbtn" id="reorderBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4"/></svg>Reorder</button></div>
  <ul class="list" id="list"></ul>
  <div class="empty" id="empty"><b>No parts scanned yet</b>Tap <strong>Scan parts</strong> and hold the Data Matrix inside the window. Each new serial is added and tagged P1, P2, P3… Keep moving from part to part; repeats are ignored.</div>
 </main>
@@ -236,6 +250,7 @@ M 5.82,11.72 L 13.25,6.62 L 13.40,6.40 L 14.05,5.97 L 14.42,5.89 L 23.01,11.72 L
  <input class="in" id="prefix" maxlength="12" autocomplete="off" autocapitalize="characters">
  <p class="hint" id="nextHint"></p>
  <label class="toggle">Beep on each new part<input type="checkbox" id="beepIn"></label>
+ <label class="toggle">Show newest part at the top<input type="checkbox" id="newestIn"></label>
  <div class="btns"><button class="b p" data-close>Done</button></div>
 </div></div>
 
@@ -261,13 +276,13 @@ M 5.82,11.72 L 13.25,6.62 L 13.40,6.40 L 14.05,5.97 L 14.42,5.89 L 23.01,11.72 L
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ls={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch{return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch{return false}}};
-const K={items:'dmscan.items',prefix:'dmscan.prefix',name:'dmscan.name',beep:'dmscan.beep',lists:'dmscan.lists',cur:'dmscan.current',emails:'dmscan.emails'};
+const K={items:'dmscan.items',prefix:'dmscan.prefix',name:'dmscan.name',beep:'dmscan.beep',lists:'dmscan.lists',cur:'dmscan.current',emails:'dmscan.emails',newest:'dmscan.newest'};
 const lid=()=>'L'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 let LISTS=ls.get(K.lists,null);
 if(!Array.isArray(LISTS)||!LISTS.length){const now=Date.now();LISTS=[{id:lid(),name:ls.get(K.name,''),items:ls.get(K.items,[]),created:now,updated:now}]}
 LISTS=LISTS.filter(l=>l&&typeof l==='object').map(l=>({id:String(l.id||lid()),name:String(l.name||''),items:Array.isArray(l.items)?l.items:[],created:+l.created||Date.now(),updated:+l.updated||Date.now()}));
 let CUR=LISTS.find(l=>l.id===ls.get(K.cur,''))||LISTS[0];
-const S={items:CUR.items,prefix:ls.get(K.prefix,'P'),name:CUR.name,beep:ls.get(K.beep,true),fresh:new Set()};
+const S={items:CUR.items,prefix:ls.get(K.prefix,'P'),name:CUR.name,beep:ls.get(K.beep,true),newestTop:ls.get(K.newest,true),fresh:new Set()};
 if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
 
 /* ---------- decoder (Web Worker) ---------- */
@@ -298,7 +313,7 @@ const clean=t=>String(t).replace(/[\x00-\x1f\x7f]/g,' ').replace(/\s+/g,' ').tri
 const L={stream:null,track:null,running:false,paused:false,seen:new Map(),canvas:document.createElement('canvas'),zoomLevels:[1],zi:0,torch:false,timer:0};
 let actx=null;
 function beep(ok){if(!S.beep||!actx)return;try{const o=actx.createOscillator(),g=actx.createGain();o.frequency.value=ok?1760:440;o.type='square';g.gain.setValueAtTime(.12,actx.currentTime);g.gain.exponentialRampToValueAtTime(.001,actx.currentTime+(ok?.12:.2));o.connect(g).connect(actx.destination);o.start();o.stop(actx.currentTime+.22)}catch{}}
-async function openScanner(){
+async function openScanner(){reordering=false;
  if(!canDecode()){setStatus('The code reader is still loading. Try again in a moment.','err');return}
  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){setStatus('This browser can’t use the camera. Use the photo button instead.','err');return}
  try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();actx.resume()}catch{}
@@ -431,11 +446,17 @@ function del(id){S.items=S.items.filter(x=>x.id!==id);save();render()}
 
 /* ---------- render ---------- */
 function fmt(ts){const d=new Date(ts);return d.toLocaleDateString(undefined,{day:'numeric',month:'short'})+' '+d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})}
+let reordering=false;
+const shown=()=>S.newestTop?[...S.items].reverse():[...S.items];
 function render(){
- const items=[...S.items].sort((a,b)=>b.ts-a.ts);updateCounts();
+ const items=shown();updateCounts();
+ if(items.length<2&&reordering)reordering=false;
+ $('tools').hidden=items.length<2;$('list').classList.toggle('reorder',reordering);
+ $('toolsTxt').textContent=reordering?'Drag \u2261 to move a part.':(S.newestTop?'Newest at the top':'First part at the top');
+ $('reorderBtn').lastChild.textContent=reordering?'Done':'Reorder';$('reorderBtn').classList.toggle('p',reordering);$('renumMatch').hidden=!reordering;
  $('listName').textContent=S.name||'Serial list';document.title=S.name||'ALM Scan';
  $('empty').hidden=items.length>0;$('mailMain').hidden=!items.length;$('mailN').textContent=`(${items.length} part${items.length===1?'':'s'})`;
- $('list').innerHTML=items.map(it=>`<li><button class="item${S.fresh.has(it.id)?' fresh':''}" data-id="${esc(it.id)}"><span class="tag">${esc(it.label||'—')}</span><span><div class="serial mono">${esc(it.serial)}</div><div class="meta">${esc(fmt(it.ts))}</div></span></button></li>`).join('');
+ $('list').innerHTML=items.map(it=>`<li data-id="${esc(it.id)}"><button class="item${S.fresh.has(it.id)?' fresh':''}" data-id="${esc(it.id)}"${reordering?' tabindex="-1"':''}><span class="tag">${esc(it.label||'—')}</span><span><div class="serial mono">${esc(it.serial)}</div><div class="meta">${esc(fmt(it.ts))}</div></span></button>${reordering?`<span class="handle" role="button" tabindex="0" aria-label="Move ${esc(it.label)}. Use the up and down arrow keys."><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 8h14M5 12h14M5 16h14"/></svg></span>`:''}</li>`).join('');
  S.fresh.clear();$('nextHint').textContent='Next new part will be '+nextLabel()+'.';
 }
 function setStatus(t,c){const s=$('status');s.textContent=t;s.className='status'+(c?' '+c:'')}
@@ -444,7 +465,7 @@ function setStatus(t,c){const s=$('status');s.textContent=t;s.className='status'
 const open=id=>$(id).classList.add('on'),close=id=>$(id).classList.remove('on');
 document.querySelectorAll('.sheet').forEach(s=>s.addEventListener('click',e=>{if(e.target===s||e.target.closest('[data-close]'))s.classList.remove('on')}));
 let editing=null;
-$('list').addEventListener('click',e=>{const b=e.target.closest('.item');if(!b)return;const it=S.items.find(x=>x.id===b.dataset.id);if(!it)return;
+$('list').addEventListener('click',e=>{if(reordering)return;const b=e.target.closest('.item');if(!b)return;const it=S.items.find(x=>x.id===b.dataset.id);if(!it)return;
  editing=it.id;$('editTitle').textContent='Edit part';$('eLabel').value=it.label;$('eSerial').value=it.serial;$('eHint').textContent='Scanned '+fmt(it.ts);$('eDel').hidden=false;open('editSheet')});
 $('typeBtn').addEventListener('click',()=>{editing=null;$('editTitle').textContent='Add a serial by hand';$('eLabel').value=nextLabel();$('eSerial').value='';$('eHint').textContent='For a code that won’t scan.';$('eDel').hidden=true;open('editSheet');setTimeout(()=>$('eSerial').focus(),50)});
 $('editForm').addEventListener('submit',e=>{e.preventDefault();
@@ -455,15 +476,16 @@ $('editForm').addEventListener('submit',e=>{e.preventDefault();
  else{const it={id:newId(),serial,label:label||nextLabel(),ts:stamp()};S.fresh.add(it.id);put(it)}
  close('editSheet')});
 let undoItem=null,toastT=null;
-$('eDel').addEventListener('click',()=>{const it=S.items.find(x=>x.id===editing);if(!it)return;close('editSheet');undoItem=it;del(it.id);toast(`Deleted ${it.label}`,true)});
+let undoIdx=-1;
+$('eDel').addEventListener('click',()=>{const it=S.items.find(x=>x.id===editing);if(!it)return;close('editSheet');undoItem=it;undoIdx=S.items.indexOf(it);del(it.id);toast(`Deleted ${it.label}`,true)});
 function toast(m,undo){$('toastMsg').textContent=m;$('toastUndo').hidden=!undo;$('toast').classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>$('toast').classList.remove('on'),undo?6000:2500)}
-$('toastUndo').addEventListener('click',()=>{if(undoItem){put(undoItem);undoItem=null}$('toast').classList.remove('on')});
+$('toastUndo').addEventListener('click',()=>{if(undoItem){if(undoIdx>=0&&!S.items.some(x=>x.id===undoItem.id)){S.items.splice(Math.min(undoIdx,S.items.length),0,undoItem);save();render()}else put(undoItem);undoItem=null}$('toast').classList.remove('on')});
 
 $('menuBtn').addEventListener('click',()=>{$('prefix').value=S.prefix;$('nameIn').value=S.name;$('beepIn').checked=S.beep;$('menuMsg').textContent='';render();open('menuSheet')});
 $('prefix').addEventListener('input',e=>{S.prefix=e.target.value.trim()||'P';ls.set(K.prefix,S.prefix);$('nextHint').textContent='Next new part will be '+nextLabel()+'.'});
 $('nameIn').addEventListener('input',e=>{S.name=e.target.value.trim();save();$('listName').textContent=S.name||'Serial list'});
 $('beepIn').addEventListener('change',e=>{S.beep=e.target.checked;ls.set(K.beep,S.beep)});
-function csv(sep){const rows=[...S.items].sort((a,b)=>a.ts-b.ts).map(it=>{const d=new Date(it.ts),p=n=>String(n).padStart(2,'0');
+function csv(sep){const rows=S.items.map(it=>{const d=new Date(it.ts),p=n=>String(n).padStart(2,'0');
   return[it.label,it.serial,`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`]});
  const cell=v=>{v=String(v);if(sep==='\t')return v.replace(/[\t\n]/g,' ');if(/^[=+\-@]/.test(v))v="'"+v;return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
  return [['Label','Serial','Scanned'],...rows].map(r=>r.map(cell).join(sep)).join('\n')}
@@ -479,8 +501,8 @@ $('copyCsv').addEventListener('click',async()=>{if(!S.items.length){$('menuMsg')
  try{await navigator.clipboard.writeText(csv('\t'));$('menuMsg').textContent='Copied '+S.items.length+' rows. Paste straight into Excel.'}catch{$('menuMsg').textContent='Copy was blocked on this phone.'}});
 function confirmBox(title,text,go){$('cTitle').textContent=title;$('cText').textContent=text;$('cGo').onclick=()=>{close('confirmSheet');go()};open('confirmSheet')}
 $('renum').addEventListener('click',()=>{if(!S.items.length)return;close('menuSheet');
- confirmBox('Renumber all parts?',`Labels become ${S.prefix}1 to ${S.prefix}${S.items.length} in the order they were scanned. Custom labels are replaced.`,()=>{
-  [...S.items].sort((a,b)=>a.ts-b.ts).forEach((it,i)=>{it.label=S.prefix+(i+1)});save();render();toast('Renumbered')})});
+ confirmBox('Renumber all parts?',`Labels become ${S.prefix}1 to ${S.prefix}${S.items.length} in list order. Custom labels are replaced.`,()=>{
+  S.items.forEach((it,i)=>{it.label=S.prefix+(i+1)});save();render();toast('Renumbered')})});
 $('clearAll').addEventListener('click',()=>{if(!S.items.length)return;close('menuSheet');
  confirmBox('Clear the whole list?',`This removes all ${S.items.length} parts from this phone. Export them first if you need them.`,()=>{S.items=[];save();render();toast('List cleared');$('shot').classList.remove('on')})});
 
@@ -493,7 +515,7 @@ function emailsHint(){const{ok,bad}=parseEmails($('emailsIn').value),h=$('emails
 function mailSubject(){const n=S.items.length,d=new Date().toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'});
  return `ALM Scan: ${S.name||'Serial list'} (${n} part${n===1?'':'s'}) ${d}`}
 function mailBody(withCsv){
- const rows=[...S.items].sort((a,b)=>a.ts-b.ts).map(it=>{const d=new Date(it.ts),p=n=>String(n).padStart(2,'0');
+ const rows=S.items.map(it=>{const d=new Date(it.ts),p=n=>String(n).padStart(2,'0');
   return [it.label,it.serial,`${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`].map(v=>String(v).replace(/[\t\r\n]/g,' ')).join('\t')});
  return `${S.name||'Serial list'}: ${S.items.length} part${S.items.length===1?'':'s'}\n\n`+['Label\tSerial\tScanned',...rows].join('\n')+
   '\n\n'+(withCsv?'The same list is attached as a CSV file.\n':'To put this in Excel, copy the table above and paste it into cell A1.\n')+'Sent from ALM Scan'}
@@ -528,8 +550,37 @@ $('mailCsv').addEventListener('click',async()=>{
   $('mailMsg').textContent='Couldn’t attach the file here. Use Open Mail without attachment instead.';
  }
 });
-$('openSettings').addEventListener('click',()=>{close('menuSheet');$('emailsIn').value=ls.get(K.emails,'');$('prefix').value=S.prefix;$('beepIn').checked=S.beep;emailsHint();render();open('setSheet')});
+$('openSettings').addEventListener('click',()=>{close('menuSheet');$('newestIn').checked=S.newestTop;$('emailsIn').value=ls.get(K.emails,'');$('prefix').value=S.prefix;$('beepIn').checked=S.beep;emailsHint();render();open('setSheet')});
 $('emailsIn').addEventListener('input',e=>{ls.set(K.emails,e.target.value);emailsHint()});
+
+$('newestIn').addEventListener('change',e=>{S.newestTop=e.target.checked;ls.set(K.newest,S.newestTop);render()});
+
+/* ---------- reorder ---------- */
+$('reorderBtn').addEventListener('click',()=>{reordering=!reordering;render();if(!reordering)toast('Order saved')});
+$('renumMatch').addEventListener('click',()=>confirmBox('Renumber to match?',`Labels become ${S.prefix}1 to ${S.prefix}${S.items.length} in the new order. Custom labels are replaced.`,()=>{S.items.forEach((it,i)=>{it.label=S.prefix+(i+1)});save();render();toast('Renumbered')}));
+function commitOrder(){const ids=[...$('list').children].map(li=>li.dataset.id);if(S.newestTop)ids.reverse();
+ const by=new Map(S.items.map(x=>[x.id,x]));const next=ids.map(id=>by.get(id)).filter(Boolean);
+ if(next.length===S.items.length&&next.some((x,i)=>x!==S.items[i])){S.items=next;save()}}
+let drag=null;
+function dragMove(){if(!drag)return;const li=drag.li;li.style.transform=`translateY(${drag.y-drag.startY}px)`;
+ const r=li.getBoundingClientRect(),mid=(r.top+r.bottom)/2;
+ const nx=li.nextElementSibling,pv=li.previousElementSibling;
+ const swap=(ref,after)=>{const before=li.offsetTop;$('list').insertBefore(li,after?ref.nextElementSibling:ref);drag.startY+=li.offsetTop-before;li.style.transform=`translateY(${drag.y-drag.startY}px)`;if(navigator.vibrate)navigator.vibrate(8)};
+ if(nx){const q=nx.getBoundingClientRect();if(mid>q.top+q.height/2){swap(nx,true);return}}
+ if(pv){const q=pv.getBoundingClientRect();if(mid<q.top+q.height/2){swap(pv,false)}}}
+function autoScroll(){if(!drag)return;const top=90,bot=innerHeight-110;let v=0;
+ if(drag.y<top)v=-Math.min(16,(top-drag.y)/4+2);else if(drag.y>bot)v=Math.min(16,(drag.y-bot)/4+2);
+ if(v){const y0=scrollY;scrollBy(0,v);const dv=scrollY-y0;if(dv){drag.startY-=dv;dragMove()}}
+ drag.raf=requestAnimationFrame(autoScroll)}
+$('list').addEventListener('pointerdown',e=>{const h=e.target.closest('.handle');if(!h||!reordering)return;e.preventDefault();
+ const li=h.closest('li');try{h.setPointerCapture(e.pointerId)}catch{}
+ drag={li,h,startY:e.clientY,y:e.clientY,id:e.pointerId};li.classList.add('dragging');drag.raf=requestAnimationFrame(autoScroll)});
+addEventListener('pointermove',e=>{if(!drag||e.pointerId!==drag.id)return;e.preventDefault();drag.y=e.clientY;dragMove()},{passive:false});
+function dragEnd(e){if(!drag||(e&&e.pointerId!==drag.id))return;cancelAnimationFrame(drag.raf);drag.li.style.transform='';drag.li.classList.remove('dragging');drag=null;commitOrder()}
+addEventListener('pointerup',dragEnd);addEventListener('pointercancel',dragEnd);addEventListener('blur',()=>dragEnd());document.addEventListener('visibilitychange',()=>{if(document.hidden)dragEnd()});
+$('list').addEventListener('keydown',e=>{const h=e.target.closest('.handle');if(!h||!reordering||(e.key!=='ArrowUp'&&e.key!=='ArrowDown'))return;e.preventDefault();
+ const li=h.closest('li'),ref=e.key==='ArrowUp'?li.previousElementSibling:li.nextElementSibling;if(!ref)return;
+ $('list').insertBefore(li,e.key==='ArrowUp'?ref:ref.nextElementSibling);commitOrder();h.focus()});
 
 /* ---------- saved lists ---------- */
 const listName=l=>l.name||'Serial list';
@@ -543,7 +594,7 @@ function renderLists(){
 }
 function switchTo(id,msg){
  save();const l=LISTS.find(x=>x.id===id);if(!l)return;
- CUR=l;S.items=l.items;S.name=l.name;ls.set(K.cur,l.id);
+ CUR=l;S.items=l.items;S.name=l.name;ls.set(K.cur,l.id);reordering=false;
  undoItem=null;$('toast').classList.remove('on');$('shot').classList.remove('on');
  setStatus(msg||`Opened ${listName(l)}.`,'good');render();renderLists();
 }
