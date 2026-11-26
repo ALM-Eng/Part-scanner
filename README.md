@@ -19,6 +19,7 @@ A phone web app that scans part Data Matrix codes with the live camera and keeps
 ## Using it
 
 - **Scan parts** opens the camera. Hold each code inside the window. New serials are added with the next label and a beep. Codes already in the list are ignored and shown in orange.
+- **Name each** in the camera view: every new scan pauses and asks for the part's label, with the next number suggested, so you can scan out of order. Tap any part in the strip at the bottom of the camera view to rename it.
 - The **photo** button reads codes from a picture. Use it for tiny or awkward codes, since a full photo has more detail than the live feed.
 - The **keyboard** button lets you type in a serial that won't scan.
 - **Email list** on the main page is one tap: Mail opens with your default recipients, the subject and the list in the body.
@@ -33,6 +34,6 @@ Your lists are saved on the phone only. They never go to GitHub. Export them bef
 
 ## Updating it later
 
-Upload the changed files to the same repository. In `sw.js`, change the version number at the end of `part-scanner-v12` (to `v13`, `v14`, and so on) so phones pick up the new version.
+Upload the changed files to the same repository. In `sw.js`, change the version number at the end of `part-scanner-v13` (to `v14`, `v15`, and so on) so phones pick up the new version.
 
 Data Matrix decoding uses zxing-wasm / zxing-cpp (MIT and Apache-2.0 licences; see ZXING-LICENSE.txt).

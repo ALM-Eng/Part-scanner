@@ -105,7 +105,19 @@ button{cursor:pointer;-webkit-tap-highlight-color:transparent}
 .chip b{background:#1f4e78;color:#fff;border-radius:5px;padding:2px 8px}
 .chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lctl{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
-.done{background:#fff;color:#1f4e78;min-width:120px;height:52px;font-size:18px;border-color:#fff}
+.done{background:#fff;color:#1f4e78;min-width:104px;height:52px;font-size:18px;border-color:#fff}
+.lctl .lbtn{height:52px}
+button.chip{border:0;font:inherit;text-align:left}
+.namer{position:absolute;left:12px;right:12px;top:calc(env(safe-area-inset-top) + 64px);max-width:520px;margin:0 auto;background:var(--surface);color:var(--ink);
+ border-radius:12px;border-top:4px solid #1f4e78;padding:12px 14px 14px;box-shadow:0 14px 36px rgba(0,0,0,.5);z-index:3}
+.namer[hidden]{display:none}
+.namer .nt{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.namer .ser{font-size:15px;font-weight:600;color:var(--ink-2);overflow-wrap:anywhere;margin:2px 0 8px}
+.namer .row2{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.namer .in{height:52px;font-size:22px;font-weight:700}
+.namer .b{min-height:52px;flex:none;min-width:96px}
+.namer .hint{margin-top:6px}
+.namer .rm{background:none;border:0;color:var(--fail);font-weight:600;font-size:14px;padding:8px 0 0;min-height:40px}
 /* sheets */
 .sheet{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:50}
 .sheet.on{display:flex}
@@ -190,9 +202,16 @@ M 5.82,11.72 L 13.25,6.62 L 13.40,6.40 L 14.05,5.97 L 14.42,5.89 L 23.01,11.72 L
   <button class="lbtn" id="zoomBtn" hidden>1×</button>
  </div>
  <div class="lmsg" id="lmsg">Hold a Data Matrix in the window</div>
+ <form class="namer" id="namer" hidden>
+  <div class="nt" id="nTitle">Name this part</div>
+  <div class="ser mono" id="nSer"></div>
+  <div class="row2"><input class="in" id="nIn" maxlength="30" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" aria-label="Part label"><button class="b p" id="nSave">Save</button></div>
+  <p class="hint" id="nHint"></p>
+  <button type="button" class="rm" id="nRemove">Remove this part</button>
+ </form>
  <div class="lbot">
   <div class="feed" id="feed"></div>
-  <div class="lctl"><button class="lbtn" id="pauseBtn">Pause</button><button class="lbtn done" id="doneBtn">Done</button></div>
+  <div class="lctl"><button class="lbtn" id="pauseBtn">Pause</button><button class="lbtn" id="askBtn" aria-pressed="false"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>Name each</button><button class="lbtn done" id="doneBtn">Done</button></div>
  </div>
 </div>
 
@@ -265,14 +284,14 @@ M 5.82,11.72 L 13.25,6.62 L 13.40,6.40 L 14.05,5.97 L 14.42,5.89 L 23.01,11.72 L
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ls={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch{return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch{return false}}};
-const K={items:'dmscan.items',prefix:'dmscan.prefix',name:'dmscan.name',beep:'dmscan.beep',lists:'dmscan.lists',cur:'dmscan.current',emails:'dmscan.emails',newest:'dmscan.newest'};
+const K={items:'dmscan.items',prefix:'dmscan.prefix',name:'dmscan.name',beep:'dmscan.beep',lists:'dmscan.lists',cur:'dmscan.current',ask:'dmscan.askname',emails:'dmscan.emails',newest:'dmscan.newest'};
 const lid=()=>'L'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 let LISTS=ls.get(K.lists,null);
 if(!Array.isArray(LISTS)||!LISTS.length){const now=Date.now();LISTS=[{id:lid(),name:ls.get(K.name,''),items:ls.get(K.items,[]),created:now,updated:now}]}
 LISTS=LISTS.filter(l=>l&&typeof l==='object').map(l=>({id:String(l.id||lid()),name:String(l.name||''),items:Array.isArray(l.items)?l.items:[],created:+l.created||Date.now(),updated:+l.updated||Date.now()}));
 if(!ls.get('dmscan.lorder',false)){LISTS.sort((a,b)=>b.updated-a.updated);ls.set('dmscan.lorder',true)}
 let CUR=LISTS.find(l=>l.id===ls.get(K.cur,''))||LISTS[0];
-const S={items:CUR.items,prefix:ls.get(K.prefix,'P'),name:CUR.name,beep:ls.get(K.beep,true),newestTop:ls.get(K.newest,true),fresh:new Set()};
+const S={items:CUR.items,prefix:ls.get(K.prefix,'P'),name:CUR.name,beep:ls.get(K.beep,true),askName:ls.get(K.ask,false),newestTop:ls.get(K.newest,true),fresh:new Set()};
 if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
 
 /* ---------- decoder (Web Worker) ---------- */
@@ -303,7 +322,7 @@ const clean=t=>String(t).replace(/[\x00-\x1f\x7f]/g,' ').replace(/\s+/g,' ').tri
 const L={stream:null,track:null,running:false,paused:false,seen:new Map(),canvas:document.createElement('canvas'),zoomLevels:[1],zi:0,torch:false,timer:0};
 let actx=null;
 function beep(ok){if(!S.beep||!actx)return;try{const o=actx.createOscillator(),g=actx.createGain();o.frequency.value=ok?1760:440;o.type='square';g.gain.setValueAtTime(.12,actx.currentTime);g.gain.exponentialRampToValueAtTime(.001,actx.currentTime+(ok?.12:.2));o.connect(g).connect(actx.destination);o.start();o.stop(actx.currentTime+.22)}catch{}}
-async function openScanner(){reordering=false;
+async function openScanner(){reordering=false;syncAsk();
  if(!canDecode()){setStatus('The code reader is still loading. Try again in a moment.','err');return}
  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){setStatus('This browser can’t use the camera. Use the photo button instead.','err');return}
  try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();actx.resume()}catch{}
@@ -324,6 +343,7 @@ function setupTrackControls(){
  $('zoomBtn').hidden=L.zoomLevels.length<2;$('zoomBtn').textContent='1×';
 }
 function closeScanner(){
+ if(L.naming)saveNamer(true);
  L.running=false;clearTimeout(L.timer);
  if(L.stream)L.stream.getTracks().forEach(t=>t.stop());L.stream=null;L.track=null;$('vid').srcObject=null;
  $('live').classList.remove('on');render();
@@ -339,7 +359,7 @@ function cropRect(){
 }
 async function loop(){
  if(!L.running)return;
- if(L.paused||document.hidden){L.timer=setTimeout(loop,250);return}
+ if(L.paused||L.naming||document.hidden){L.timer=setTimeout(loop,250);return}
  const c=cropRect();
  if(c&&c.w>20){
   const M=1100,k=Math.min(1,M/Math.max(c.w,c.h)),cv=L.canvas;cv.width=Math.round(c.w*k);cv.height=Math.round(c.h*k);
@@ -358,8 +378,9 @@ function handleLive(res){
   const ex=S.items.find(x=>x.serial===serial);
   if(ex){dup=ex;continue}
   const it={id:newId(),serial,label:nextLabel(),ts:stamp()};put(it);S.fresh.add(it.id);hit=it;
+  if(S.askName)break;
  }
- if(hit){flash('hit',`Added ${hit.label} · ${hit.serial}`);beep(true);if(navigator.vibrate)navigator.vibrate(60);renderFeed();updateCounts()}
+ if(hit){flash('hit',`Added ${hit.label} · ${hit.serial}`);beep(true);if(navigator.vibrate)navigator.vibrate(60);renderFeed();updateCounts();if(S.askName)openNamer(hit,true)}
  else if(dup){flash('dup',`Already in list as ${dup.label}`);beep(false)}
 }
 let flashT=0;
@@ -367,8 +388,35 @@ function flash(kind,msg){const w=$('win'),m=$('lmsg');w.classList.remove('hit','
  clearTimeout(flashT);flashT=setTimeout(()=>{w.classList.remove('hit','dup');m.classList.remove('hit','dup');m.textContent=L.paused?'Paused':'Hold a Data Matrix in the window'},1600)}
 function setLive(t){$('lmsg').textContent=t}
 function renderFeed(){const last=[...S.items].sort((a,b)=>b.ts-a.ts).slice(0,6);
- $('feed').innerHTML=last.map(it=>`<div class="chip"><b>${esc(it.label)}</b><span class="mono">${esc(it.serial)}</span></div>`).join('')}
+ $('feed').innerHTML=last.map(it=>`<button type="button" class="chip" data-id="${esc(it.id)}" aria-label="Rename ${esc(it.label)}"><b>${esc(it.label)}</b><span class="mono">${esc(it.serial)}</span></button>`).join('')}
 function updateCounts(){const n=S.items.length,t=n+(n===1?' part':' parts');$('count').textContent=t;$('lcount').textContent=t}
+/* ---------- name each part while scanning ---------- */
+let nWarned=null;
+function syncAsk(){$('askBtn').classList.toggle('on',S.askName);$('askBtn').setAttribute('aria-pressed',String(S.askName))}
+function openNamer(it,fresh){
+ L.naming=it.id;nWarned=null;
+ $('nTitle').textContent=fresh?'Name this part':'Rename part';
+ $('nSer').textContent=it.serial;$('nIn').value=it.label;
+ $('nHint').textContent=fresh?'Next number suggested. Change it if this part is out of order.':'';
+ $('namer').hidden=false;$('win').classList.add('paused');
+ if(!fresh){try{$('nIn').focus();$('nIn').select()}catch{}}
+}
+function closeNamer(){$('namer').hidden=true;L.naming=null;$('nIn').blur();$('win').classList.toggle('paused',L.paused);
+ const now=Date.now();for(const k of L.seen.keys())L.seen.set(k,now);
+ setLive(L.paused?'Paused':'Hold a Data Matrix in the window')}
+function saveNamer(force){
+ const it=S.items.find(x=>x.id===L.naming);if(!it){closeNamer();return}
+ const v=$('nIn').value.trim()||it.label;
+ const clash=S.items.find(x=>x.id!==it.id&&x.label.toLowerCase()===v.toLowerCase());
+ if(clash&&!force&&nWarned!==v){nWarned=v;$('nHint').textContent=`${v} is already used for another part. Tap Save again to use it anyway.`;return}
+ if(v!==it.label)put({...it,label:v});
+ renderFeed();closeNamer();
+ if(v!==it.label)flash('hit',`Saved as ${v}`);
+}
+$('namer').addEventListener('submit',e=>{e.preventDefault();saveNamer(false)});
+$('nRemove').addEventListener('click',()=>{const it=S.items.find(x=>x.id===L.naming);if(it){del(it.id);renderFeed();updateCounts();flash('dup',`Removed ${it.serial}`)}closeNamer()});
+$('askBtn').addEventListener('click',()=>{S.askName=!S.askName;ls.set(K.ask,S.askName);syncAsk();setLive(S.askName?'Each new part will ask for a name':'Parts are numbered automatically')});
+$('feed').addEventListener('click',e=>{const c=e.target.closest('.chip');if(!c)return;const it=S.items.find(x=>x.id===c.dataset.id);if(it){if(L.naming)saveNamer(true);openNamer(it,false)}});
 $('scanBtn').addEventListener('click',openScanner);
 $('doneBtn').addEventListener('click',closeScanner);
 $('pauseBtn').addEventListener('click',()=>{L.paused=!L.paused;$('pauseBtn').textContent=L.paused?'Resume':'Pause';$('win').classList.toggle('paused',L.paused);setLive(L.paused?'Paused':'Hold a Data Matrix in the window')});
