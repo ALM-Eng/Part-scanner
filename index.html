@@ -505,10 +505,13 @@ function emailsHint(){const{ok,bad}=parseEmails($('emailsIn').value),h=$('emails
 function mailSubject(){const n=S.items.length,d=new Date().toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'});
  return `ALM Scan: ${S.name||'Serial list'} (${n} part${n===1?'':'s'}) ${d}`}
 function mailBody(withCsv){
- const rows=S.items.map(it=>{const d=new Date(it.ts),p=n=>String(n).padStart(2,'0');
-  return [it.label,it.serial,`${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`].map(v=>String(v).replace(/[\t\r\n]/g,' ')).join('\t')});
- return `${S.name||'Serial list'}: ${S.items.length} part${S.items.length===1?'':'s'}\n\n`+['Label\tSerial\tScanned',...rows].join('\n')+
-  '\n\n'+(withCsv?'The same list is attached as a CSV file.\n':'To put this in Excel, copy the table above and paste it into cell A1.\n')+'Sent from ALM Scan'}
+ const one=v=>String(v).replace(/[\t\r\n]+/g,' ').trim();
+ const p=n=>String(n).padStart(2,'0'),when=t=>{const d=new Date(t);return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`};
+ const n=S.items.length,ts=S.items.map(x=>x.ts).filter(Boolean),lo=Math.min(...ts),hi=Math.max(...ts);
+ const span=!ts.length?'':(when(lo).slice(0,10)===when(hi).slice(0,10)?`Scanned ${when(lo)}${when(hi)!==when(lo)?' to '+when(hi).slice(11):''}`:`Scanned ${when(lo)} to ${when(hi)}`);
+ const parts=S.items.map(it=>`${one(it.label)||'(no label)'}\n${one(it.serial)}`).join('\n\n');
+ return `${one(S.name||'Serial list')}\n${n} part${n===1?'':'s'}${span?'\n'+span:''}\n\n${parts}\n\n`+
+  (withCsv?'The full list, with scan times, is attached as a CSV file for Excel.\n':'')+'Sent from ALM Scan'}
 let FILE_SHARE=false;
 if(navigator.canShare){try{FILE_SHARE=navigator.canShare({files:[new File(['x'],'t.csv',{type:'text/csv'})]})}catch{}}
 let copiedTo=null;
